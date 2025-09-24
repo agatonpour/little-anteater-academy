@@ -120,6 +120,59 @@ const Dashboard = () => {
     }
   };
 
+  const rescheduleSession = async (sessionId: string) => {
+    try {
+      // For demo purposes, just update the session date to tomorrow
+      const newDate = new Date();
+      newDate.setDate(newDate.getDate() + 1);
+      newDate.setHours(17, 0, 0, 0);
+      
+      const { error } = await supabase
+        .from('sessions')
+        .update({ session_date: newDate.toISOString() })
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Session rescheduled!",
+        description: "Your session has been moved to tomorrow at 5 PM.",
+      });
+
+      loadSessions();
+    } catch (error: any) {
+      toast({
+        title: "Reschedule failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelSession = async (sessionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Session cancelled",
+        description: "Your session has been successfully cancelled.",
+      });
+
+      loadSessions();
+    } catch (error: any) {
+      toast({
+        title: "Cancellation failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -218,14 +271,12 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* My Page Section */}
-          <div>
-            <h2 className="text-2xl font-bold mb-6">My Page</h2>
-            
+          {/* Sessions and Profile Section */}
+          <div className="space-y-6">
             {/* Upcoming Sessions */}
-            <Card className="mb-6">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-primary">
                   <Calendar className="h-5 w-5" />
                   Upcoming Sessions
                 </CardTitle>
@@ -245,7 +296,54 @@ const Dashboard = () => {
                               {new Date(session.session_date).toLocaleDateString()}
                             </p>
                           </div>
-                          <Badge variant="secondary">{session.status}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{session.status}</Badge>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => rescheduleSession(session.id)}
+                            >
+                              Reschedule
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => cancelSession(session.id)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Past Sessions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-secondary">
+                  <Clock className="h-5 w-5" />
+                  Past Sessions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {sessions.filter(s => new Date(s.session_date) <= new Date()).length === 0 ? (
+                  <p className="text-muted-foreground">No past sessions yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {sessions
+                      .filter(s => new Date(s.session_date) <= new Date())
+                      .map((session) => (
+                        <div key={session.id} className="flex justify-between items-center p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{session.coaches?.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(session.session_date).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge variant="outline">{session.status}</Badge>
                         </div>
                       ))}
                   </div>
@@ -256,7 +354,7 @@ const Dashboard = () => {
             {/* Personal Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-primary">
                   <User className="h-5 w-5" />
                   Personal Info
                 </CardTitle>
