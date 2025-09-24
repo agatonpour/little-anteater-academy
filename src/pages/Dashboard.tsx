@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [coaches, setCoaches] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [selectedCoach, setSelectedCoach] = useState<any>(null);
+  const [reschedulingSession, setReschedulingSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -94,27 +95,45 @@ const Dashboard = () => {
       sessionDate.setDate(sessionDate.getDate() + 1);
       sessionDate.setHours(17, 0, 0, 0); // Default to 5 PM tomorrow
       
-      const { error } = await supabase
-        .from('sessions')
-        .insert({
-          user_id: user.id,
-          coach_id: coachId,
-          session_date: sessionDate.toISOString(),
-          status: 'confirmed'
+      if (reschedulingSession) {
+        // Update existing session
+        const { error } = await supabase
+          .from('sessions')
+          .update({ session_date: sessionDate.toISOString() })
+          .eq('id', reschedulingSession.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Session rescheduled!",
+          description: `Your training session with ${selectedCoach?.name} has been rescheduled.`,
         });
+        
+        setReschedulingSession(null);
+      } else {
+        // Create new session
+        const { error } = await supabase
+          .from('sessions')
+          .insert({
+            user_id: user.id,
+            coach_id: coachId,
+            session_date: sessionDate.toISOString(),
+            status: 'confirmed'
+          });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Session booked!",
-        description: `Your training session with ${selectedCoach?.name} has been confirmed.`,
-      });
+        toast({
+          title: "Session booked!",
+          description: `Your training session with ${selectedCoach?.name} has been confirmed.`,
+        });
+      }
 
       setSelectedCoach(null);
       loadSessions();
     } catch (error: any) {
       toast({
-        title: "Booking failed",
+        title: reschedulingSession ? "Reschedule failed" : "Booking failed",
         description: error.message || "Please try again.",
         variant: "destructive",
       });
@@ -122,31 +141,13 @@ const Dashboard = () => {
   };
 
   const rescheduleSession = async (sessionId: string) => {
-    try {
-      // For demo purposes, just update the session date to tomorrow
-      const newDate = new Date();
-      newDate.setDate(newDate.getDate() + 1);
-      newDate.setHours(17, 0, 0, 0);
-      
-      const { error } = await supabase
-        .from('sessions')
-        .update({ session_date: newDate.toISOString() })
-        .eq('id', sessionId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Session rescheduled!",
-        description: "Your session has been moved to tomorrow at 5 PM.",
-      });
-
-      loadSessions();
-    } catch (error: any) {
-      toast({
-        title: "Reschedule failed",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      const coach = coaches.find(c => c.id === session.coach_id);
+      if (coach) {
+        setReschedulingSession(session);
+        setSelectedCoach(coach);
+      }
     }
   };
 
@@ -243,7 +244,9 @@ const Dashboard = () => {
                 <Card className="w-full max-w-md">
                   <CardHeader>
                     <CardTitle>{selectedCoach.name}</CardTitle>
-                    <CardDescription>Select an available time slot</CardDescription>
+                    <CardDescription>
+                      {reschedulingSession ? 'Select a new time slot' : 'Select an available time slot'}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 mb-4">
@@ -261,7 +264,10 @@ const Dashboard = () => {
                     </div>
                     <Button
                       variant="ghost"
-                      onClick={() => setSelectedCoach(null)}
+                      onClick={() => {
+                        setSelectedCoach(null);
+                        setReschedulingSession(null);
+                      }}
                       className="w-full"
                     >
                       Cancel
