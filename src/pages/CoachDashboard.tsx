@@ -7,10 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Clock, User, CheckCircle, XCircle, Plus, Settings, LogOut } from "lucide-react";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar, Clock, User, CheckCircle, XCircle, Plus, Settings, LogOut, Eye, Edit, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import type { User as AuthUser, Session as AuthSession } from "@supabase/supabase-js";
 
 interface CoachProfile {
@@ -32,7 +36,22 @@ interface SessionData {
   profiles: {
     name: string;
     position: string;
+    age?: number;
+    gender?: string;
+    goals?: string;
+    team?: string;
+    area?: string;
   } | null;
+}
+
+interface PlayerDetails {
+  name: string;
+  position: string;
+  age: number;
+  gender: string;
+  goals: string;
+  team: string;
+  area: string;
 }
 
 interface AvailabilitySlot {
@@ -50,7 +69,27 @@ const CoachDashboard = () => {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [isAddingAvailability, setIsAddingAvailability] = useState(false);
-  const [newSlot, setNewSlot] = useState({ day_of_week: "", start_time: "", end_time: "" });
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [newSlot, setNewSlot] = useState({ 
+    date: "",
+    start_hour: "", 
+    start_minute: "", 
+    start_period: "AM",
+    end_hour: "", 
+    end_minute: "", 
+    end_period: "AM" 
+  });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editProfile, setEditProfile] = useState({
+    name: "",
+    position: "", 
+    strengths: "",
+    bio: "",
+    age: "",
+    gender: ""
+  });
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerDetails | null>(null);
+  const [isViewingPlayer, setIsViewingPlayer] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -126,7 +165,7 @@ const CoachDashboard = () => {
         (sessionsData || []).map(async (session) => {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('name, position')
+            .select('name, position, age, gender, goals, team, area')
             .eq('user_id', session.user_id)
             .single();
 
@@ -175,33 +214,121 @@ const CoachDashboard = () => {
     }
   };
 
+  const convertTo24Hour = (hour: string, minute: string, period: string) => {
+    const h = parseInt(hour);
+    const m = minute.padStart(2, '0');
+    
+    if (period === "AM") {
+      if (h === 12) return `00:${m}`;
+      return `${h.toString().padStart(2, '0')}:${m}`;
+    } else {
+      if (h === 12) return `12:${m}`;
+      return `${(h + 12).toString().padStart(2, '0')}:${m}`;
+    }
+  };
+
   const addAvailabilitySlot = async () => {
-    if (!newSlot.day_of_week || !newSlot.start_time || !newSlot.end_time || !coachProfile) {
+    if (!selectedDate || !newSlot.start_hour || !newSlot.start_minute || 
+        !newSlot.end_hour || !newSlot.end_minute || !coachProfile) {
       toast.error("Please fill in all fields");
       return;
     }
+
+    const startTime = convertTo24Hour(newSlot.start_hour, newSlot.start_minute, newSlot.start_period);
+    const endTime = convertTo24Hour(newSlot.end_hour, newSlot.end_minute, newSlot.end_period);
+    const dayOfWeek = format(selectedDate, 'EEEE');
 
     try {
       const { error } = await supabase
         .from('coach_availability')
         .insert({
           coach_id: coachProfile.id,
-          day_of_week: newSlot.day_of_week,
-          start_time: newSlot.start_time,
-          end_time: newSlot.end_time,
+          day_of_week: dayOfWeek,
+          start_time: startTime,
+          end_time: endTime,
           is_available: true
         });
 
       if (error) throw error;
 
       toast.success("Availability added successfully");
-      setNewSlot({ day_of_week: "", start_time: "", end_time: "" });
+      setNewSlot({ 
+        date: "",
+        start_hour: "", 
+        start_minute: "", 
+        start_period: "AM",
+        end_hour: "", 
+        end_minute: "", 
+        end_period: "AM" 
+      });
+      setSelectedDate(undefined);
       setIsAddingAvailability(false);
       
       if (user) fetchCoachData(user.id);
     } catch (error) {
       console.error('Error adding availability:', error);
       toast.error('Failed to add availability');
+    }
+  };
+
+  const updateProfile = async () => {
+    if (!coachProfile || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('coaches')
+        .update({
+          name: editProfile.name,
+          position: editProfile.position,
+          strengths: editProfile.strengths,
+          bio: editProfile.bio
+        })
+        .eq('id', coachProfile.id);
+
+      if (error) throw error;
+
+      // Update profiles table too
+      await supabase
+        .from('profiles')
+        .update({
+          name: editProfile.name,
+          age: parseInt(editProfile.age),
+          gender: editProfile.gender
+        })
+        .eq('user_id', user.id);
+
+      toast.success("Profile updated successfully");
+      setIsEditingProfile(false);
+      fetchCoachData(user.id);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    }
+  };
+
+  const formatTimeDisplay = (time: string) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const h = parseInt(hours);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${displayHour}:${minutes} ${period}`;
+  };
+
+  const viewPlayerDetails = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('name, position, age, gender, goals, team, area')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) throw error;
+      setSelectedPlayer(profile);
+      setIsViewingPlayer(true);
+    } catch (error) {
+      console.error('Error fetching player details:', error);
+      toast.error('Failed to load player details');
     }
   };
 
@@ -305,8 +432,26 @@ const CoachDashboard = () => {
         {/* Coach Profile Section */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Your Coach Profile</CardTitle>
-            <CardDescription>Your profile information as shown to players</CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Your Coach Profile</CardTitle>
+                <CardDescription>Your profile information as shown to players</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => {
+                setEditProfile({
+                  name: coachProfile.name,
+                  position: coachProfile.position,
+                  strengths: coachProfile.strengths,
+                  bio: coachProfile.bio,
+                  age: "",
+                  gender: ""
+                });
+                setIsEditingProfile(true);
+              }}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex gap-6">
@@ -344,8 +489,18 @@ const CoachDashboard = () => {
                   pendingSessions.map((session) => (
                     <div key={session.id} className="border rounded-lg p-4 space-y-3">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">{session.profiles?.name || 'Unknown Player'}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{session.profiles?.name || 'Unknown Player'}</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => viewPlayerDetails(session.user_id)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
                           <p className="text-sm text-muted-foreground">{session.profiles?.position || 'Unknown Position'}</p>
                           <p className="text-sm text-muted-foreground">
                             {format(new Date(session.session_date), 'EEEE, MMMM d, yyyy h:mm a')}
@@ -399,7 +554,7 @@ const CoachDashboard = () => {
                       Add Slot
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>Add Availability Slot</DialogTitle>
                       <DialogDescription>
@@ -408,40 +563,102 @@ const CoachDashboard = () => {
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label>Day of Week</Label>
-                        <Select value={newSlot.day_of_week} onValueChange={(value) => setNewSlot(prev => ({ ...prev, day_of_week: value }))}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select day" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Monday">Monday</SelectItem>
-                            <SelectItem value="Tuesday">Tuesday</SelectItem>
-                            <SelectItem value="Wednesday">Wednesday</SelectItem>
-                            <SelectItem value="Thursday">Thursday</SelectItem>
-                            <SelectItem value="Friday">Friday</SelectItem>
-                            <SelectItem value="Saturday">Saturday</SelectItem>
-                            <SelectItem value="Sunday">Sunday</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label>Select Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !selectedDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={selectedDate}
+                              onSelect={setSelectedDate}
+                              initialFocus
+                              className="pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Start Time</Label>
-                          <Input
-                            type="time"
-                            value={newSlot.start_time}
-                            onChange={(e) => setNewSlot(prev => ({ ...prev, start_time: e.target.value }))}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>End Time</Label>
-                          <Input
-                            type="time"
-                            value={newSlot.end_time}
-                            onChange={(e) => setNewSlot(prev => ({ ...prev, end_time: e.target.value }))}
-                          />
+                      
+                      <div className="space-y-3">
+                        <Label>Start Time</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          <Select value={newSlot.start_hour} onValueChange={(value) => setNewSlot(prev => ({ ...prev, start_hour: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Hr" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({length: 12}, (_, i) => i + 1).map(hour => (
+                                <SelectItem key={hour} value={hour.toString()}>{hour}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select value={newSlot.start_minute} onValueChange={(value) => setNewSlot(prev => ({ ...prev, start_minute: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Min" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(minute => (
+                                <SelectItem key={minute} value={minute}>{minute}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select value={newSlot.start_period} onValueChange={(value) => setNewSlot(prev => ({ ...prev, start_period: value }))}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="AM">AM</SelectItem>
+                              <SelectItem value="PM">PM</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
+
+                      <div className="space-y-3">
+                        <Label>End Time</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          <Select value={newSlot.end_hour} onValueChange={(value) => setNewSlot(prev => ({ ...prev, end_hour: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Hr" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({length: 12}, (_, i) => i + 1).map(hour => (
+                                <SelectItem key={hour} value={hour.toString()}>{hour}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select value={newSlot.end_minute} onValueChange={(value) => setNewSlot(prev => ({ ...prev, end_minute: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Min" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(minute => (
+                                <SelectItem key={minute} value={minute}>{minute}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select value={newSlot.end_period} onValueChange={(value) => setNewSlot(prev => ({ ...prev, end_period: value }))}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="AM">AM</SelectItem>
+                              <SelectItem value="PM">PM</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
                       <Button onClick={addAvailabilitySlot} className="w-full">
                         Add Availability
                       </Button>
@@ -460,7 +677,7 @@ const CoachDashboard = () => {
                       <div>
                         <span className="font-medium">{slot.day_of_week}</span>
                         <span className="text-muted-foreground ml-2">
-                          {slot.start_time} - {slot.end_time}
+                          {formatTimeDisplay(slot.start_time)} - {formatTimeDisplay(slot.end_time)}
                         </span>
                       </div>
                       <Badge variant={slot.is_available ? "default" : "secondary"}>
@@ -499,6 +716,117 @@ const CoachDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Edit Profile Dialog */}
+        <Dialog open={isEditingProfile} onOpenChange={setIsEditingProfile}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Profile</DialogTitle>
+              <DialogDescription>Update your coach profile information</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={editProfile.name}
+                  onChange={(e) => setEditProfile(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Position</Label>
+                <Input
+                  value={editProfile.position}
+                  onChange={(e) => setEditProfile(prev => ({ ...prev, position: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Age</Label>
+                  <Input
+                    type="number"
+                    value={editProfile.age}
+                    onChange={(e) => setEditProfile(prev => ({ ...prev, age: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Gender</Label>
+                  <Select value={editProfile.gender} onValueChange={(value) => setEditProfile(prev => ({ ...prev, gender: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Strengths</Label>
+                <Input
+                  value={editProfile.strengths}
+                  onChange={(e) => setEditProfile(prev => ({ ...prev, strengths: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Bio</Label>
+                <Textarea
+                  value={editProfile.bio}
+                  onChange={(e) => setEditProfile(prev => ({ ...prev, bio: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+              <Button onClick={updateProfile} className="w-full">
+                Update Profile
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Player Details Dialog */}
+        <Dialog open={isViewingPlayer} onOpenChange={setIsViewingPlayer}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Player Details</DialogTitle>
+              <DialogDescription>Complete player information</DialogDescription>
+            </DialogHeader>
+            {selectedPlayer && (
+              <div className="space-y-3">
+                <div>
+                  <Label className="font-semibold">Name</Label>
+                  <p>{selectedPlayer.name}</p>
+                </div>
+                <div>
+                  <Label className="font-semibold">Position</Label>
+                  <p>{selectedPlayer.position}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="font-semibold">Age</Label>
+                    <p>{selectedPlayer.age}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Gender</Label>
+                    <p>{selectedPlayer.gender}</p>
+                  </div>
+                </div>
+                <div>
+                  <Label className="font-semibold">Team</Label>
+                  <p>{selectedPlayer.team}</p>
+                </div>
+                <div>
+                  <Label className="font-semibold">Area</Label>
+                  <p>{selectedPlayer.area}</p>
+                </div>
+                <div>
+                  <Label className="font-semibold">Goals</Label>
+                  <p>{selectedPlayer.goals}</p>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
