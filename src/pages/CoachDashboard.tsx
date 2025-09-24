@@ -88,6 +88,7 @@ const CoachDashboard = () => {
     age: "",
     gender: ""
   });
+  const [profileImage, setProfileImage] = useState<File | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerDetails | null>(null);
   const [isViewingPlayer, setIsViewingPlayer] = useState(false);
   const navigate = useNavigate();
@@ -329,17 +330,41 @@ const CoachDashboard = () => {
     }
   };
 
+  const uploadProfileImage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('coach-images')
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('coach-images')
+      .getPublicUrl(fileName);
+
+    return data.publicUrl;
+  };
+
   const updateProfile = async () => {
     if (!coachProfile || !user) return;
 
     try {
+      let imageUrl = coachProfile.image_url;
+      
+      if (profileImage) {
+        imageUrl = await uploadProfileImage(profileImage);
+      }
+
       const { error } = await supabase
         .from('coaches')
         .update({
           name: editProfile.name,
           position: editProfile.position,
           strengths: editProfile.strengths,
-          bio: editProfile.bio
+          bio: editProfile.bio,
+          image_url: imageUrl
         })
         .eq('id', coachProfile.id);
 
@@ -357,6 +382,7 @@ const CoachDashboard = () => {
 
       toast.success("Profile updated successfully");
       setIsEditingProfile(false);
+      setProfileImage(null);
       fetchCoachData(user.id);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -436,56 +462,6 @@ const CoachDashboard = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pending Requests</p>
-                  <p className="text-2xl font-bold">{pendingSessions.length}</p>
-                </div>
-                <Clock className="h-8 w-8 text-amber-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Confirmed Sessions</p>
-                  <p className="text-2xl font-bold">{upcomingSessions.length}</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Sessions</p>
-                  <p className="text-2xl font-bold">{sessions.length}</p>
-                </div>
-                <User className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Available Slots</p>
-                  <p className="text-2xl font-bold">{availability.length}</p>
-                </div>
-                <Calendar className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Coach Profile Section */}
         <Card className="mb-8">
@@ -727,22 +703,24 @@ const CoachDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {availability.length === 0 ? (
+                {availability.filter(slot => slot.is_available).length === 0 ? (
                   <p className="text-muted-foreground text-center py-4">No availability set</p>
                 ) : (
-                  availability.map((slot) => (
-                    <div key={slot.id} className="flex justify-between items-center p-2 border rounded">
-                      <div>
-                        <span className="font-medium">{slot.day_of_week}</span>
-                        <span className="text-muted-foreground ml-2">
-                          {formatTimeDisplay(slot.start_time)} - {formatTimeDisplay(slot.end_time)}
-                        </span>
+                  availability
+                    .filter(slot => slot.is_available)
+                    .map((slot) => (
+                      <div key={slot.id} className="flex justify-between items-center p-2 border rounded">
+                        <div>
+                          <span className="font-medium">{slot.day_of_week}</span>
+                          <span className="text-muted-foreground ml-2">
+                            {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                          </span>
+                        </div>
+                        <Badge variant="default">
+                          Available
+                        </Badge>
                       </div>
-                      <Badge variant={slot.is_available ? "default" : "secondary"}>
-                        {slot.is_available ? "Available" : "Unavailable"}
-                      </Badge>
-                    </div>
-                  ))
+                    ))
                 )}
               </div>
             </CardContent>
@@ -783,6 +761,22 @@ const CoachDashboard = () => {
               <DialogDescription>Update your coach profile information</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Profile Image</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setProfileImage(file);
+                  }}
+                />
+                {profileImage && (
+                  <p className="text-sm text-muted-foreground">
+                    Selected: {profileImage.name}
+                  </p>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label>Name</Label>
                 <Input

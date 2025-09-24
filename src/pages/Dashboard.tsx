@@ -185,6 +185,17 @@ const Dashboard = () => {
 
         if (error) throw error;
 
+        // Mark new slot as unavailable
+        const newDayOfWeek = format(sessionDate, 'EEEE');
+        const newSessionTime = format(sessionDate, 'HH:mm');
+
+        await supabase
+          .from('coach_availability')
+          .update({ is_available: false })
+          .eq('coach_id', coachId)
+          .eq('day_of_week', newDayOfWeek)
+          .eq('start_time', newSessionTime);
+
         toast({
           title: "Session rescheduled!",
           description: `Your training session with ${selectedCoach?.name} has been rescheduled to ${timeSlot}.`,
@@ -207,6 +218,17 @@ const Dashboard = () => {
 
         if (error) throw error;
 
+        // Mark slot as unavailable
+        const dayOfWeek = format(sessionDate, 'EEEE');
+        const sessionTime = format(sessionDate, 'HH:mm');
+
+        await supabase
+          .from('coach_availability')
+          .update({ is_available: false })
+          .eq('coach_id', coachId)
+          .eq('day_of_week', dayOfWeek)
+          .eq('start_time', sessionTime);
+
         toast({
           title: "Session booked!",
           description: `Your training session with ${selectedCoach?.name} has been confirmed for ${timeSlot}.`,
@@ -215,6 +237,7 @@ const Dashboard = () => {
 
       setSelectedCoach(null);
       await loadSessions();
+      await loadCoaches(); // Refresh coaches to update availability
     } catch (error: any) {
       toast({
         title: reschedulingSession ? "Reschedule failed" : "Booking failed",
@@ -229,20 +252,56 @@ const Dashboard = () => {
     if (session) {
       const coach = coaches.find(c => c.id === session.coach_id);
       if (coach) {
+        // Restore availability for the old slot
+        const sessionDate = new Date(session.session_date);
+        const dayOfWeek = format(sessionDate, 'EEEE');
+        const sessionTime = format(sessionDate, 'HH:mm');
+
+        await supabase
+          .from('coach_availability')
+          .update({ is_available: true })
+          .eq('coach_id', session.coach_id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('start_time', sessionTime);
+
         setReschedulingSession(session);
         setSelectedCoach(coach);
+        await loadCoaches(); // Refresh coaches to show restored availability
       }
     }
   };
 
   const cancelSession = async (sessionId: string) => {
     try {
+      // Get session details first to restore availability
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      // Update session status to cancelled instead of deleting
       const { error } = await supabase
         .from('sessions')
-        .delete()
+        .update({ status: 'cancelled' })
         .eq('id', sessionId);
 
       if (error) throw error;
+
+      // Restore the availability slot
+      const sessionDate = new Date(session.session_date);
+      const dayOfWeek = format(sessionDate, 'EEEE');
+      const sessionTime = format(sessionDate, 'HH:mm');
+
+      const { error: availabilityError } = await supabase
+        .from('coach_availability')
+        .update({ is_available: true })
+        .eq('coach_id', session.coach_id)
+        .eq('day_of_week', dayOfWeek)
+        .eq('start_time', sessionTime);
+
+      if (availabilityError) {
+        console.error('Error restoring availability:', availabilityError);
+      }
 
       toast({
         title: "Session cancelled",
@@ -250,6 +309,7 @@ const Dashboard = () => {
       });
 
       await loadSessions();
+      await loadCoaches(); // Refresh coaches to show restored availability
     } catch (error: any) {
       toast({
         title: "Cancellation failed",
