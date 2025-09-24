@@ -92,20 +92,32 @@ const Dashboard = () => {
   const bookSession = async (coachId: string, timeSlot: string) => {
     try {
       const sessionDate = new Date();
-      // Parse the time slot (e.g., "2:00 PM") and set it properly
-      const [time, period] = timeSlot.split(' ');
-      const [hours, minutes] = time.split(':').map(Number);
-      let adjustedHours = hours;
       
-      if (period === 'PM' && hours !== 12) {
-        adjustedHours += 12;
-      } else if (period === 'AM' && hours === 12) {
-        adjustedHours = 0;
+      // Clean and parse the time slot (e.g., "Tuesday 5:00 PM" or "5:00 PM")
+      const timeString = timeSlot.trim();
+      console.log('Parsing time slot:', timeString);
+      
+      // Extract the time portion (handle both "Day HH:MM AM/PM" and "HH:MM AM/PM" formats)
+      const timeMatch = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      
+      if (!timeMatch) {
+        throw new Error(`Invalid time format: ${timeString}`);
+      }
+      
+      const [, hoursStr, minutesStr, period] = timeMatch;
+      let hours = parseInt(hoursStr);
+      const minutes = parseInt(minutesStr);
+      
+      // Convert to 24-hour format
+      if (period.toUpperCase() === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period.toUpperCase() === 'AM' && hours === 12) {
+        hours = 0;
       }
       
       // Schedule for tomorrow to ensure it appears in upcoming sessions
       sessionDate.setDate(sessionDate.getDate() + 1);
-      sessionDate.setHours(adjustedHours, minutes || 0, 0, 0);
+      sessionDate.setHours(hours, minutes, 0, 0);
       
       if (reschedulingSession) {
         // Update existing session
