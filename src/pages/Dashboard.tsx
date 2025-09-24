@@ -70,7 +70,8 @@ const Dashboard = () => {
 
   const loadSessions = async () => {
     try {
-      if (!user) return;
+      const currentUser = await getCurrentUser();
+      if (!currentUser) return;
       
       const { data, error } = await supabase
         .from('sessions')
@@ -78,7 +79,7 @@ const Dashboard = () => {
           *,
           coaches (name, position)
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', currentUser.id)
         .order('session_date');
       
       if (error) throw error;
@@ -91,9 +92,20 @@ const Dashboard = () => {
   const bookSession = async (coachId: string, timeSlot: string) => {
     try {
       const sessionDate = new Date();
+      // Parse the time slot (e.g., "2:00 PM") and set it properly
+      const [time, period] = timeSlot.split(' ');
+      const [hours, minutes] = time.split(':').map(Number);
+      let adjustedHours = hours;
+      
+      if (period === 'PM' && hours !== 12) {
+        adjustedHours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        adjustedHours = 0;
+      }
+      
       // Schedule for tomorrow to ensure it appears in upcoming sessions
       sessionDate.setDate(sessionDate.getDate() + 1);
-      sessionDate.setHours(17, 0, 0, 0); // Default to 5 PM tomorrow
+      sessionDate.setHours(adjustedHours, minutes || 0, 0, 0);
       
       if (reschedulingSession) {
         // Update existing session
@@ -106,16 +118,19 @@ const Dashboard = () => {
 
         toast({
           title: "Session rescheduled!",
-          description: `Your training session with ${selectedCoach?.name} has been rescheduled.`,
+          description: `Your training session with ${selectedCoach?.name} has been rescheduled to ${timeSlot}.`,
         });
         
         setReschedulingSession(null);
       } else {
         // Create new session
+        const currentUser = await getCurrentUser();
+        if (!currentUser) return;
+
         const { error } = await supabase
           .from('sessions')
           .insert({
-            user_id: user.id,
+            user_id: currentUser.id,
             coach_id: coachId,
             session_date: sessionDate.toISOString(),
             status: 'confirmed'
@@ -125,12 +140,12 @@ const Dashboard = () => {
 
         toast({
           title: "Session booked!",
-          description: `Your training session with ${selectedCoach?.name} has been confirmed.`,
+          description: `Your training session with ${selectedCoach?.name} has been confirmed for ${timeSlot}.`,
         });
       }
 
       setSelectedCoach(null);
-      loadSessions();
+      await loadSessions();
     } catch (error: any) {
       toast({
         title: reschedulingSession ? "Reschedule failed" : "Booking failed",
@@ -165,7 +180,7 @@ const Dashboard = () => {
         description: "Your session has been successfully cancelled.",
       });
 
-      loadSessions();
+      await loadSessions();
     } catch (error: any) {
       toast({
         title: "Cancellation failed",
