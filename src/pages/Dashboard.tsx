@@ -6,6 +6,7 @@ import { Calendar, Clock, User, LogOut, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase, signOut, getCurrentUser, getUserProfile } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import coachSarah from "@/assets/coach-sarah.jpg";
 import coachMike from "@/assets/coach-mike.jpg";
 import coachEmma from "@/assets/coach-emma.jpg";
@@ -27,6 +28,41 @@ const Dashboard = () => {
     'Coach Mike Rodriguez': coachMike,
     'Coach Emma Thompson': coachEmma,
     'Coach David Park': coachDavid,
+  };
+
+  // Helper function to get next occurrence of a weekday
+  const getNextWeekdayDate = (weekdayName: string, timeString: string) => {
+    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const targetWeekday = weekdays.findIndex(day => weekdayName.toLowerCase().includes(day.toLowerCase()));
+    
+    if (targetWeekday === -1) return null;
+    
+    const today = new Date();
+    const currentWeekday = today.getDay();
+    
+    // Calculate days until next occurrence
+    let daysUntil = targetWeekday - currentWeekday;
+    if (daysUntil <= 0) daysUntil += 7; // Get next week's occurrence
+    
+    const targetDate = addDays(today, daysUntil);
+    
+    // Parse time
+    const timeMatch = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (timeMatch) {
+      const [, hoursStr, minutesStr, period] = timeMatch;
+      let hours = parseInt(hoursStr);
+      const minutes = parseInt(minutesStr);
+      
+      if (period.toUpperCase() === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period.toUpperCase() === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      targetDate.setHours(hours, minutes, 0, 0);
+    }
+    
+    return targetDate;
   };
 
   useEffect(() => {
@@ -277,17 +313,24 @@ const Dashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 mb-4">
-                      {selectedCoach.available_times?.map((time: string, index: number) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          className="w-full justify-start"
-                          onClick={() => bookSession(selectedCoach.id, time)}
-                        >
-                          <Clock className="h-4 w-4 mr-2" />
-                          {time}
-                        </Button>
-                      ))}
+                      {selectedCoach.available_times?.map((time: string, index: number) => {
+                        const fullDate = getNextWeekdayDate(time, time);
+                        const displayText = fullDate 
+                          ? format(fullDate, "EEEE, MMMM d, h:mm a")
+                          : time;
+                        
+                        return (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => bookSession(selectedCoach.id, time)}
+                          >
+                            <Clock className="h-4 w-4 mr-2" />
+                            {displayText}
+                          </Button>
+                        );
+                      })}
                     </div>
                     <Button
                       variant="ghost"
@@ -327,7 +370,10 @@ const Dashboard = () => {
                           <div>
                             <p className="font-medium">{session.coaches?.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(session.session_date).toLocaleDateString()}
+                              {format(new Date(session.session_date), "EEEE, MMMM d, yyyy")}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(session.session_date), "h:mm a")}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
@@ -374,7 +420,10 @@ const Dashboard = () => {
                           <div>
                             <p className="font-medium">{session.coaches?.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(session.session_date).toLocaleDateString()}
+                              {format(new Date(session.session_date), "EEEE, MMMM d, yyyy")}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(session.session_date), "h:mm a")}
                             </p>
                           </div>
                           <Badge variant="outline">{session.status}</Badge>
