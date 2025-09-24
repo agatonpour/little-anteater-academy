@@ -196,6 +196,13 @@ const CoachDashboard = () => {
 
   const handleSessionAction = async (sessionId: string, status: 'confirmed' | 'cancelled') => {
     try {
+      // Get session details first to find the corresponding availability slot
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) {
+        toast.error('Session not found');
+        return;
+      }
+
       const { error } = await supabase
         .from('sessions')
         .update({ status })
@@ -203,9 +210,60 @@ const CoachDashboard = () => {
 
       if (error) throw error;
 
+      // If confirming a session, mark the corresponding availability slot as unavailable
+      if (status === 'confirmed' && coachProfile) {
+        const sessionDate = new Date(session.session_date);
+        const dayOfWeek = format(sessionDate, 'EEEE');
+        const sessionTime = format(sessionDate, 'HH:mm');
+
+        // Find and update the matching availability slot
+        const { error: availabilityError } = await supabase
+          .from('coach_availability')
+          .update({ is_available: false })
+          .eq('coach_id', coachProfile.id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('start_time', sessionTime);
+
+        if (availabilityError) {
+          console.error('Error updating availability:', availabilityError);
+          // Don't throw error here as the session was already confirmed
+        }
+      }
+
+      // If cancelling a confirmed session, restore the availability slot
+      if (status === 'cancelled' && coachProfile) {
+        const sessionDate = new Date(session.session_date);
+        const dayOfWeek = format(sessionDate, 'EEEE');
+        const sessionTime = format(sessionDate, 'HH:mm');
+
+        const { error: availabilityError } = await supabase
+          .from('coach_availability')
+          .update({ is_available: true })
+          .eq('coach_id', coachProfile.id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('start_time', sessionTime);
+
+        if (availabilityError) {
+          console.error('Error restoring availability:', availabilityError);
+        }
+      }
+
       setSessions(prev => prev.map(session => 
         session.id === sessionId ? { ...session, status } : session
       ));
+
+      // Refresh availability data to show updated slots
+      if (user) {
+        const { data: availabilityData, error: fetchError } = await supabase
+          .from('coach_availability')
+          .select('*')
+          .eq('coach_id', coachProfile.id)
+          .order('day_of_week');
+
+        if (!fetchError) {
+          setAvailability(availabilityData || []);
+        }
+      }
 
       toast.success(`Session ${status === 'confirmed' ? 'confirmed' : 'cancelled'} successfully`);
     } catch (error) {
