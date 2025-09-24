@@ -144,7 +144,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       {/* Header */}
       <header className="container mx-auto px-6 py-4 flex justify-between items-center border-b">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+        <h1 className="text-2xl font-bold text-primary">
           Little Anteater Academy
         </h1>
         <div className="flex items-center gap-4">

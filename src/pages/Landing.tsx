@@ -20,10 +20,7 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       {/* Header */}
-      <header className="container mx-auto px-6 py-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-          Little Anteater Academy
-        </h1>
+      <header className="container mx-auto px-6 py-4 flex justify-end items-center">
         <Button variant="academy" onClick={() => navigate('/login')}>
           Login / Create Account
         </Button>
@@ -32,9 +29,9 @@ const Landing = () => {
       {/* Hero Section */}
       <section className="container mx-auto px-6 py-20 text-center">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-5xl font-bold mb-6 bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">
-            Excellence in Athletic Training
-          </h2>
+           <h2 className="text-5xl font-bold mb-6 text-primary">
+             Little Anteater Academy
+           </h2>
           <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
             [Mission Statement Placeholder - To be updated with your academy's mission, values, and commitment to developing young athletes through personalized training programs.]
           </p>
@@ -57,7 +54,7 @@ const Landing = () => {
 
       {/* Player Profiles */}
       <section className="container mx-auto px-6 py-16">
-        <h3 className="text-3xl font-bold text-center mb-12">Meet Our Coaches</h3>
+        <h3 className="text-3xl font-bold text-center mb-12 text-secondary">Meet Our Coaches</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
           {coaches.map((coach, index) => (
             <Card key={index} className="group hover:shadow-[var(--academy-shadow)] transition-[var(--transition-smooth)] overflow-hidden">
