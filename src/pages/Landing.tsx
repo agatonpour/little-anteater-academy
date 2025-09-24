@@ -79,14 +79,24 @@ const Landing = () => {
           <p className="text-lg text-muted-foreground mb-6">
             Ready to start your training journey?
           </p>
-          <Button 
-            variant="academy" 
-            size="lg" 
-            onClick={() => navigate('/login')}
-            className="text-lg px-8 py-3"
-          >
-            Login / Create Account to Book Session
-          </Button>
+          <div className="flex gap-4 justify-center">
+            <Button 
+              variant="academy" 
+              size="lg" 
+              onClick={() => navigate('/login')}
+              className="text-lg px-8 py-3"
+            >
+              Login / Create Account to Book Session
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={() => navigate('/coach-signup')}
+              className="text-lg px-8 py-3"
+            >
+              Join as Coach
+            </Button>
+          </div>
         </div>
       </section>
     </div>

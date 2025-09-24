@@ -92,15 +92,53 @@ const Dashboard = () => {
 
   const loadCoaches = async () => {
     try {
-      const { data, error } = await supabase
+      // Get coaches with their availability
+      const { data: coachesData, error: coachesError } = await supabase
         .from('coaches')
-        .select('*')
+        .select(`
+          id,
+          name,
+          position,
+          bio,
+          image_url,
+          strengths,
+          coach_availability (
+            day_of_week,
+            start_time,
+            end_time,
+            is_available
+          )
+        `)
+        .not('user_id', 'is', null) // Only get coaches linked to users
         .order('name');
-      
-      if (error) throw error;
-      setCoaches(data || []);
+
+      if (coachesError) throw coachesError;
+
+      // Transform the data to match expected format with available_times array
+      const transformedCoaches = (coachesData || []).map(coach => ({
+        ...coach,
+        available_times: coach.coach_availability
+          ?.filter(slot => slot.is_available)
+          .map(slot => {
+            // Format time slots as "Day HH:MM AM/PM"
+            const startTime = new Date(`2000-01-01T${slot.start_time}`);
+            const formattedTime = startTime.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            return `${slot.day_of_week} ${formattedTime}`;
+          }) || []
+      }));
+
+      setCoaches(transformedCoaches);
     } catch (error) {
       console.error('Error loading coaches:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load coaches",
+        variant: "destructive"
+      });
     }
   };
 
@@ -164,7 +202,7 @@ const Dashboard = () => {
             user_id: currentUser.id,
             coach_id: coachId,
             session_date: sessionDate.toISOString(),
-            status: 'confirmed'
+            status: 'pending'
           });
 
         if (error) throw error;
@@ -267,7 +305,7 @@ const Dashboard = () => {
                   <CardContent className="p-0">
                     <div className="aspect-square overflow-hidden rounded-t-lg">
                       <img
-                        src={coachImages[coach.name] || coachSarah}
+                        src={coach.image_url || coachSarah}
                         alt={coach.name}
                         className="w-full h-full object-cover hover:scale-105 transition-[var(--transition-smooth)]"
                       />

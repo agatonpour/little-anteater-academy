@@ -20,11 +20,12 @@ export const signUp = async (email: string, password: string, userData: {
   if (error) throw error;
 
   if (data.user) {
-    // Create profile
+    // Create profile with player role (default)
     const { error: profileError } = await supabase
       .from('profiles')
       .insert({
         user_id: data.user.id,
+        role: 'player',
         ...userData,
       });
 

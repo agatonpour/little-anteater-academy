@@ -14,33 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      coach_availability: {
+        Row: {
+          coach_id: string
+          created_at: string
+          day_of_week: string
+          end_time: string
+          id: string
+          is_available: boolean
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          day_of_week: string
+          end_time: string
+          id?: string
+          is_available?: boolean
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          day_of_week?: string
+          end_time?: string
+          id?: string
+          is_available?: boolean
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_availability_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coaches: {
         Row: {
-          available_times: string[] | null
           bio: string | null
           created_at: string
           id: string
           image_url: string | null
           name: string
           position: string | null
+          strengths: string | null
+          user_id: string | null
         }
         Insert: {
-          available_times?: string[] | null
           bio?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
           name: string
           position?: string | null
+          strengths?: string | null
+          user_id?: string | null
         }
         Update: {
-          available_times?: string[] | null
           bio?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
           name?: string
           position?: string | null
+          strengths?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -54,6 +98,7 @@ export type Database = {
           id: string
           name: string
           position: string | null
+          role: Database["public"]["Enums"]["user_role"]
           team: string | null
           updated_at: string
           user_id: string
@@ -67,6 +112,7 @@ export type Database = {
           id?: string
           name: string
           position?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
           team?: string | null
           updated_at?: string
           user_id: string
@@ -80,6 +126,7 @@ export type Database = {
           id?: string
           name?: string
           position?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
           team?: string | null
           updated_at?: string
           user_id?: string
@@ -93,7 +140,7 @@ export type Database = {
           id: string
           notes: string | null
           session_date: string
-          status: string
+          status: Database["public"]["Enums"]["session_status"]
           updated_at: string
           user_id: string
         }
@@ -103,7 +150,7 @@ export type Database = {
           id?: string
           notes?: string | null
           session_date: string
-          status?: string
+          status?: Database["public"]["Enums"]["session_status"]
           updated_at?: string
           user_id: string
         }
@@ -113,7 +160,7 @@ export type Database = {
           id?: string
           notes?: string | null
           session_date?: string
-          status?: string
+          status?: Database["public"]["Enums"]["session_status"]
           updated_at?: string
           user_id?: string
         }
@@ -135,7 +182,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      session_status: "pending" | "confirmed" | "completed" | "cancelled"
+      user_role: "player" | "coach"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -262,6 +310,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      session_status: ["pending", "confirmed", "completed", "cancelled"],
+      user_role: ["player", "coach"],
+    },
   },
 } as const
