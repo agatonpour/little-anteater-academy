@@ -90,8 +90,9 @@ const Dashboard = () => {
   const bookSession = async (coachId: string, timeSlot: string) => {
     try {
       const sessionDate = new Date();
-      // For demo purposes, just add the time slot to today's date
-      sessionDate.setHours(17, 0, 0, 0); // Default to 5 PM
+      // Schedule for tomorrow to ensure it appears in upcoming sessions
+      sessionDate.setDate(sessionDate.getDate() + 1);
+      sessionDate.setHours(17, 0, 0, 0); // Default to 5 PM tomorrow
       
       const { error } = await supabase
         .from('sessions')
@@ -323,7 +324,7 @@ const Dashboard = () => {
             {/* Past Sessions */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-secondary">
+                <CardTitle className="flex items-center gap-2 text-primary">
                   <Clock className="h-5 w-5" />
                   Past Sessions
                 </CardTitle>
