@@ -302,6 +302,33 @@ const CoachDashboard = () => {
           </Card>
         </div>
 
+        {/* Coach Profile Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Your Coach Profile</CardTitle>
+            <CardDescription>Your profile information as shown to players</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-6">
+              {coachProfile.image_url && (
+                <div className="flex-shrink-0">
+                  <img
+                    src={coachProfile.image_url}
+                    alt={coachProfile.name}
+                    className="w-24 h-24 rounded-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="flex-1 space-y-2">
+                <h3 className="text-xl font-semibold">{coachProfile.name}</h3>
+                <p className="text-muted-foreground">{coachProfile.position}</p>
+                <p className="text-sm"><strong>Strengths:</strong> {coachProfile.strengths}</p>
+                <p className="text-sm">{coachProfile.bio}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Pending Session Requests */}
           <Card>

@@ -79,7 +79,7 @@ const Landing = () => {
           <p className="text-lg text-muted-foreground mb-6">
             Ready to start your training journey?
           </p>
-          <div className="flex gap-4 justify-center">
+          <div className="flex flex-col gap-4 items-center">
             <Button 
               variant="academy" 
               size="lg" 
@@ -90,11 +90,11 @@ const Landing = () => {
             </Button>
             <Button 
               variant="outline" 
-              size="lg" 
-              onClick={() => navigate('/coach-signup')}
-              className="text-lg px-8 py-3"
+              size="sm" 
+              onClick={() => navigate('/coach-login')}
+              className="text-sm px-6 py-2"
             >
-              Join as Coach
+              Sign in as Coach
             </Button>
           </div>
         </div>

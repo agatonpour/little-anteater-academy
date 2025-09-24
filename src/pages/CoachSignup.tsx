@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,14 +19,15 @@ const CoachSignup = () => {
     gender: "",
     position: "",
     strengths: "",
-    bio: ""
+    bio: "",
+    image: null as File | null
   });
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email || !formData.password || !formData.name) {
-      toast.error("Please fill in all required fields");
+    if (!formData.email || !formData.password || !formData.name || !formData.image) {
+      toast.error("Please fill in all required fields including uploading your photo");
       return;
     }
 
@@ -47,6 +48,25 @@ const CoachSignup = () => {
       if (authError) throw authError;
 
       if (authData.user) {
+        // Upload image first
+        let imageUrl = "";
+        if (formData.image) {
+          const fileExt = formData.image.name.split('.').pop();
+          const fileName = `${authData.user.id}-${Date.now()}.${fileExt}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('coach-images')
+            .upload(fileName, formData.image);
+
+          if (uploadError) throw uploadError;
+
+          const { data: urlData } = supabase.storage
+            .from('coach-images')
+            .getPublicUrl(fileName);
+          
+          imageUrl = urlData.publicUrl;
+        }
+
         // Create profile with coach role
         const { error: profileError } = await supabase
           .from('profiles')
@@ -70,13 +90,13 @@ const CoachSignup = () => {
             position: formData.position,
             bio: formData.bio,
             strengths: formData.strengths,
-            image_url: `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face`
+            image_url: imageUrl
           });
 
         if (coachError) throw coachError;
 
         toast.success("Coach account created successfully! Please check your email to verify your account.");
-        navigate("/login");
+        navigate("/coach-login");
       }
     } catch (error) {
       console.error("Signup error:", error);
@@ -193,10 +213,38 @@ const CoachSignup = () => {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="image">Profile Photo *</Label>
+              <Input
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setFormData(prev => ({ ...prev, image: file }));
+                  }
+                }}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Upload a professional photo that will be shown to players
+              </p>
+            </div>
+
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Creating Account..." : "Create Coach Account"}
             </Button>
           </form>
+          
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Already have a coach account?{" "}
+              <Link to="/coach-login" className="text-primary hover:underline">
+                Sign In
+              </Link>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
