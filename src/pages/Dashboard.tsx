@@ -157,10 +157,10 @@ const Dashboard = () => {
 
       <div className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Coaches Section */}
+          {/* Soccer Coaches Section */}
           <div className="lg:col-span-2">
-            <h2 className="text-2xl font-bold mb-6">Available Coaches</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <h2 className="text-2xl font-bold mb-6">Soccer Coaches</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {coaches.map((coach) => (
                 <Card key={coach.id} className="hover:shadow-[var(--academy-shadow)] transition-[var(--transition-smooth)] cursor-pointer" onClick={() => setSelectedCoach(coach)}>
                   <CardContent className="p-0">
@@ -171,12 +171,11 @@ const Dashboard = () => {
                         className="w-full h-full object-cover hover:scale-105 transition-[var(--transition-smooth)]"
                       />
                     </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold text-lg">{coach.name}</h3>
-                      <p className="text-muted-foreground mb-2">{coach.position}</p>
-                      <p className="text-sm text-muted-foreground mb-3">{coach.bio}</p>
-                      <Button variant="academy-outline" size="sm" className="w-full">
-                        View Available Times
+                    <div className="p-3">
+                      <h3 className="font-semibold text-sm">{coach.name}</h3>
+                      <p className="text-xs text-muted-foreground mb-2">{coach.position}</p>
+                      <Button variant="academy-outline" size="sm" className="w-full text-xs">
+                        Book Session
                       </Button>
                     </div>
                   </CardContent>

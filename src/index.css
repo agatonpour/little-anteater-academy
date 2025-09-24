@@ -9,38 +9,38 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 215 25% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 25% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 215 25% 15%;
 
-    --primary: 25 95% 53%;
+    --primary: 215 100% 15%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 213 94% 68%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 45 100% 60%;
+    --secondary-foreground: 215 100% 15%;
 
-    --muted: 213 27% 94%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 16% 46%;
 
-    --accent: 213 94% 68%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 45 100% 60%;
+    --accent-foreground: 215 100% 15%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 25 95% 53%;
+    --ring: 45 100% 60%;
 
-    /* Sports academy custom tokens */
-    --academy-gradient: linear-gradient(135deg, hsl(25 95% 53%), hsl(213 94% 68%));
-    --academy-hero-gradient: linear-gradient(135deg, hsl(25 95% 53% / 0.1), hsl(213 94% 68% / 0.1));
-    --academy-shadow: 0 10px 30px -10px hsl(25 95% 53% / 0.3);
-    --academy-glow: 0 0 40px hsl(25 95% 53% / 0.4);
+    /* Soccer academy custom tokens - Navy & Gold theme */
+    --academy-gradient: linear-gradient(135deg, hsl(215 100% 15%), hsl(45 100% 60%));
+    --academy-hero-gradient: linear-gradient(135deg, hsl(215 100% 15% / 0.95), hsl(45 100% 60% / 0.1));
+    --academy-shadow: 0 10px 30px -10px hsl(215 100% 15% / 0.3);
+    --academy-glow: 0 0 40px hsl(45 100% 60% / 0.4);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     --radius: 0.5rem;

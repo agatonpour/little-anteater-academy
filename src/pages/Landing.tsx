@@ -11,10 +11,10 @@ const Landing = () => {
   const navigate = useNavigate();
 
   const coaches = [
-    { name: "Coach Sarah Martinez", position: "Soccer Coach", image: coachSarah },
-    { name: "Coach Mike Rodriguez", position: "Basketball Coach", image: coachMike },
-    { name: "Coach Emma Thompson", position: "Track & Field Coach", image: coachEmma },
-    { name: "Coach David Park", position: "Tennis Coach", image: coachDavid },
+    { name: "Coach Sarah Martinez", position: "Head Soccer Coach", image: coachSarah },
+    { name: "Coach Mike Rodriguez", position: "Goalkeeper Coach", image: coachMike },
+    { name: "Coach Emma Thompson", position: "Youth Development", image: coachEmma },
+    { name: "Coach David Park", position: "Fitness & Conditioning", image: coachDavid },
   ];
 
   return (
