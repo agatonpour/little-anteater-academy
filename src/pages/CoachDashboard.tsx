@@ -220,39 +220,50 @@ const CoachDashboard = () => {
         const sessionTime = format(sessionDate, 'HH:mm');
         const specificDate = format(sessionDate, 'yyyy-MM-dd');
 
-        // Find and update the matching availability slot 
-        // Try to match with specific_date first, then fallback to day_of_week only
-        let { error: availabilityError } = await supabase
+        console.log('🔍 Confirming session - looking for availability to disable:', {
+          coach_id: coachProfile.id,
+          dayOfWeek,
+          sessionTime,
+          specificDate,
+          session_date: session.session_date
+        });
+
+        // Find matching availability records first
+        const { data: matchingSlots, error: findError } = await supabase
           .from('coach_availability')
-          .update({ is_available: false })
+          .select('*')
           .eq('coach_id', coachProfile.id)
           .eq('day_of_week', dayOfWeek)
-          .eq('start_time', sessionTime)
-          .eq('specific_date', specificDate);
+          .eq('start_time', sessionTime);
 
-        // If no rows were updated (maybe no specific_date match), try without specific_date
-        if (!availabilityError) {
-          const { count } = await supabase
+        console.log('📋 Found matching availability slots:', matchingSlots);
+
+        if (findError) {
+          console.error('❌ Error finding availability slots:', findError);
+        }
+
+        // Update the availability slot - prioritize specific_date match
+        const slotsWithSpecificDate = matchingSlots?.filter(slot => slot.specific_date === specificDate);
+        const slotsWithoutSpecificDate = matchingSlots?.filter(slot => !slot.specific_date);
+
+        let availabilityError = null;
+
+        if (slotsWithSpecificDate && slotsWithSpecificDate.length > 0) {
+          console.log('🎯 Updating slot with specific date:', slotsWithSpecificDate[0]);
+          const { error } = await supabase
             .from('coach_availability')
-            .select('*', { count: 'exact', head: true })
-            .eq('coach_id', coachProfile.id)
-            .eq('day_of_week', dayOfWeek)
-            .eq('start_time', sessionTime)
-            .eq('specific_date', specificDate)
-            .eq('is_available', false);
-
-          // If no records were updated with specific_date, try without it
-          if (count === 0) {
-            const { error: fallbackError } = await supabase
-              .from('coach_availability')
-              .update({ is_available: false })
-              .eq('coach_id', coachProfile.id)
-              .eq('day_of_week', dayOfWeek)
-              .eq('start_time', sessionTime)
-              .is('specific_date', null);
-
-            availabilityError = fallbackError;
-          }
+            .update({ is_available: false })
+            .eq('id', slotsWithSpecificDate[0].id);
+          availabilityError = error;
+        } else if (slotsWithoutSpecificDate && slotsWithoutSpecificDate.length > 0) {
+          console.log('🎯 Updating slot without specific date:', slotsWithoutSpecificDate[0]);
+          const { error } = await supabase
+            .from('coach_availability')
+            .update({ is_available: false })
+            .eq('id', slotsWithoutSpecificDate[0].id);
+          availabilityError = error;
+        } else {
+          console.log('⚠️ No matching availability slots found to update');
         }
 
         if (availabilityError) {
@@ -312,6 +323,7 @@ const CoachDashboard = () => {
 
       // Refresh availability data to show updated slots
       if (user) {
+        console.log('🔄 Refreshing availability data after session action');
         const { data: availabilityData, error: fetchError } = await supabase
           .from('coach_availability')
           .select('*')
@@ -320,7 +332,10 @@ const CoachDashboard = () => {
           .order('specific_date', { ascending: true });
 
         if (!fetchError) {
+          console.log('📊 Updated availability data:', availabilityData);
           setAvailability(availabilityData || []);
+        } else {
+          console.error('❌ Error fetching updated availability:', fetchError);
         }
       }
 
