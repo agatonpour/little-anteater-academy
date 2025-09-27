@@ -21,7 +21,7 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       {/* Header */}
-      <header className="container mx-auto px-6 py-4 flex justify-end items-center gap-4">
+      <header className="container mx-auto px-6 py-4 flex justify-between items-center">
         <Button 
           variant="outline" 
           size="sm" 
@@ -30,7 +30,10 @@ const Landing = () => {
         >
           Sign in as Coach
         </Button>
-        <Button variant="academy" onClick={() => navigate('/login')}>
+        <Button 
+          onClick={() => navigate('/login')}
+          className="bg-[hsl(222,84%,27%)] hover:bg-[hsl(222,84%,22%)] text-white"
+        >
           Login
         </Button>
       </header>
@@ -51,12 +54,12 @@ const Landing = () => {
               Little Anteater Academy
             </h1>
             <p className="text-xl mb-8 leading-relaxed text-white/90 drop-shadow-md max-w-3xl mx-auto">
-              To inspire and develop the next generation of soccer players in our community by providing high-quality, accessible training led by UC Irvine Men's Soccer athletes. We aim to build skills, confidence, and a lifelong love of the game while giving back to the families who support us and the sport we love.
+              Our mission is to inspire and develop the next generation of soccer players in our community by providing high-quality, accessible training led by UC Irvine Men's Soccer athletes. We aim to build skills, confidence, and a lifelong love of the game while giving back to the families who support us and the sport we love.
             </p>
             <div className="flex flex-wrap justify-center gap-8 mt-12">
               <div className="flex items-center gap-3 text-lg text-white/90">
                 <Trophy className="h-6 w-6 text-white" />
-                <span>Championship Training</span>
+                <span>High-Quality Training</span>
               </div>
               <div className="flex items-center gap-3 text-lg text-white/90">
                 <Target className="h-6 w-6 text-white" />
@@ -64,7 +67,7 @@ const Landing = () => {
               </div>
               <div className="flex items-center gap-3 text-lg text-white/90">
                 <Users className="h-6 w-6 text-white" />
-                <span>Expert Coaches</span>
+                <span>Division 1 Coaches</span>
               </div>
             </div>
           </div>
@@ -99,12 +102,11 @@ const Landing = () => {
             Ready to start your training journey?
           </p>
           <Button 
-            variant="academy" 
             size="lg" 
             onClick={() => navigate('/login')}
-            className="text-lg px-8 py-3"
+            className="bg-[hsl(222,84%,27%)] hover:bg-[hsl(222,84%,22%)] text-white text-lg px-8 py-3"
           >
-            Login to Book Session
+            Login /Create Account to Book Session
           </Button>
         </div>
       </section>
