@@ -146,9 +146,10 @@ const Dashboard = () => {
             });
             
             if (slot.specific_date) {
-              const date = new Date(slot.specific_date);
-              const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-              const dateStr = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+              // Use format from date-fns to avoid timezone issues
+              const date = new Date(slot.specific_date + 'T00:00:00');
+              const dayName = format(date, 'EEEE');
+              const dateStr = format(date, 'MMMM d');
               return `${dayName} ${dateStr} ${formattedTime}`;
             }
             

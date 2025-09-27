@@ -495,6 +495,78 @@ const CoachDashboard = () => {
     }
   };
 
+  const cancelConfirmedSession = async (sessionId: string) => {
+    try {
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) {
+        toast.error('Session not found');
+        return;
+      }
+
+      // Delete the session
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      // Restore the availability slot
+      const sessionDate = new Date(session.session_date);
+      const dayOfWeek = format(sessionDate, 'EEEE');
+      const sessionTime = format(sessionDate, 'HH:mm');
+      const specificDate = format(sessionDate, 'yyyy-MM-dd');
+      const dbTimeFormat = `${sessionTime}:00`;
+
+      // Find and restore the matching availability slot
+      const { data: matchingSlots } = await supabase
+        .from('coach_availability')
+        .select('*')
+        .eq('coach_id', coachProfile.id)
+        .eq('day_of_week', dayOfWeek)
+        .eq('start_time', dbTimeFormat);
+
+      const slotsWithSpecificDate = matchingSlots?.filter(slot => slot.specific_date === specificDate);
+      const slotsWithoutSpecificDate = matchingSlots?.filter(slot => !slot.specific_date);
+
+      if (slotsWithSpecificDate && slotsWithSpecificDate.length > 0) {
+        await supabase
+          .from('coach_availability')
+          .update({ is_available: true })
+          .eq('id', slotsWithSpecificDate[0].id);
+      } else if (slotsWithoutSpecificDate && slotsWithoutSpecificDate.length > 0) {
+        await supabase
+          .from('coach_availability')
+          .update({ is_available: true })
+          .eq('id', slotsWithoutSpecificDate[0].id);
+      }
+
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      if (user) fetchCoachData(user.id);
+      toast.success("Session cancelled and availability restored");
+    } catch (error) {
+      console.error('Error cancelling session:', error);
+      toast.error('Failed to cancel session');
+    }
+  };
+
+  const removeAvailabilitySlot = async (slotId: string) => {
+    try {
+      const { error } = await supabase
+        .from('coach_availability')
+        .delete()
+        .eq('id', slotId);
+
+      if (error) throw error;
+
+      setAvailability(prev => prev.filter(slot => slot.id !== slotId));
+      toast.success("Availability slot removed");
+    } catch (error) {
+      console.error('Error removing availability slot:', error);
+      toast.error('Failed to remove availability slot');
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -796,18 +868,26 @@ const CoachDashboard = () => {
                        return slot.is_available;
                      })
                      .map((slot) => (
-                        <div key={slot.id} className="flex justify-between items-center p-2 border rounded">
-                          <div>
-                            <span className="font-medium">
-                              {slot.specific_date 
-                                ? `${format(new Date(slot.specific_date), 'EEEE')}, ${format(new Date(slot.specific_date), 'MMMM d')}, ${formatTimeDisplay(slot.start_time)} - ${formatTimeDisplay(slot.end_time)}`
-                                : `${slot.day_of_week}, ${formatTimeDisplay(slot.start_time)} - ${formatTimeDisplay(slot.end_time)}`}
-                            </span>
-                          </div>
-                          <Badge variant="default">
-                            Available
-                          </Badge>
-                        </div>
+                         <div key={slot.id} className="flex justify-between items-center p-2 border rounded">
+                           <div>
+                             <span className="font-medium">
+                               {slot.specific_date 
+                                 ? `${format(new Date(slot.specific_date + 'T00:00:00'), 'EEEE')}, ${format(new Date(slot.specific_date + 'T00:00:00'), 'MMMM d')}, ${formatTimeDisplay(slot.start_time)} - ${formatTimeDisplay(slot.end_time)}`
+                                 : `${slot.day_of_week}, ${formatTimeDisplay(slot.start_time)} - ${formatTimeDisplay(slot.end_time)}`}
+                             </span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Badge variant="default">Available</Badge>
+                             <Button
+                               variant="destructive"
+                               size="sm"
+                               onClick={() => removeAvailabilitySlot(slot.id!)}
+                               className="h-6 px-2"
+                             >
+                               <XCircle className="h-3 w-3" />
+                             </Button>
+                           </div>
+                         </div>
                     ))
                 )}
               </div>
@@ -825,17 +905,37 @@ const CoachDashboard = () => {
               {upcomingSessions.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No upcoming sessions</p>
               ) : (
-                upcomingSessions.map((session) => (
-                  <div key={session.id} className="border rounded-lg p-4 flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{session.profiles?.name || 'Unknown Player'}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(session.session_date), 'EEEE, MMMM d, yyyy h:mm a')}
-                      </p>
-                    </div>
-                    <Badge>Confirmed</Badge>
-                  </div>
-                ))
+                 upcomingSessions.map((session) => (
+                   <div key={session.id} className="border rounded-lg p-4 flex justify-between items-center">
+                     <div className="flex-1">
+                       <div className="flex items-center gap-2">
+                         <p className="font-medium">{session.profiles?.name || 'Unknown Player'}</p>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => viewPlayerDetails(session.user_id)}
+                           className="h-6 w-6 p-0"
+                         >
+                           <Eye className="h-4 w-4" />
+                         </Button>
+                       </div>
+                       <p className="text-sm text-muted-foreground">
+                         {format(new Date(session.session_date), 'EEEE, MMMM d, yyyy h:mm a')}
+                       </p>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <Badge>Confirmed</Badge>
+                       <Button
+                         variant="destructive"
+                         size="sm"
+                         onClick={() => cancelConfirmedSession(session.id)}
+                       >
+                         <XCircle className="h-4 w-4 mr-1" />
+                         Cancel
+                       </Button>
+                     </div>
+                   </div>
+                 ))
               )}
             </div>
           </CardContent>
