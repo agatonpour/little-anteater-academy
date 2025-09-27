@@ -229,12 +229,15 @@ const CoachDashboard = () => {
         });
 
         // Find matching availability records first
+        // Format time to match database format (HH:mm:ss)
+        const dbTimeFormat = `${sessionTime}:00`;
+        
         const { data: matchingSlots, error: findError } = await supabase
           .from('coach_availability')
           .select('*')
           .eq('coach_id', coachProfile.id)
           .eq('day_of_week', dayOfWeek)
-          .eq('start_time', sessionTime);
+          .eq('start_time', dbTimeFormat);
 
         console.log('📋 Found matching availability slots:', matchingSlots);
 
