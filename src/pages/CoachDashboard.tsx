@@ -206,9 +206,9 @@ const CoachDashboard = () => {
         return;
       }
 
-      // If cancelling, use the dedicated cancel function that deletes the session
+      // If cancelling/denying, handle availability restoration
       if (status === 'cancelled') {
-        await cancelConfirmedSession(sessionId);
+        await handleSessionDenial(sessionId);
         return;
       }
 
@@ -457,6 +457,128 @@ const CoachDashboard = () => {
     }
   };
 
+  const handleSessionDenial = async (sessionId: string) => {
+    try {
+      console.log('🔥 Denying/Cancelling session:', sessionId);
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) {
+        toast.error('Session not found');
+        return;
+      }
+
+      console.log('📅 Session to deny/cancel:', session);
+
+      // Delete the session
+      const { error: deleteError } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (deleteError) {
+        console.error('❌ Delete error:', deleteError);
+        throw deleteError;
+      }
+
+      console.log('✅ Session deleted successfully');
+
+      // For denied sessions, we only restore availability if no duplicate exists
+      const sessionDate = new Date(session.session_date);
+      const dayOfWeek = format(sessionDate, 'EEEE');
+      const sessionTime = format(sessionDate, 'HH:mm');
+      const specificDate = format(sessionDate, 'yyyy-MM-dd');
+      const dbTimeFormat = `${sessionTime}:00`;
+
+      // Check if there's already an available slot at this time/date to avoid duplicates
+      const { data: existingAvailableSlots, error: availCheckError } = await supabase
+        .from('coach_availability')
+        .select('*')
+        .eq('coach_id', coachProfile.id)
+        .eq('day_of_week', dayOfWeek)
+        .eq('start_time', dbTimeFormat)
+        .eq('is_available', true);
+
+      // Check for exact matches (same date) to prevent duplicates
+      const duplicateSlot = existingAvailableSlots?.find(slot => slot.specific_date === specificDate);
+      
+      if (duplicateSlot) {
+        console.log('⚠️ Availability slot already exists, no need to create duplicate');
+      } else {
+        console.log('🔍 No duplicate found, proceeding with availability restoration');
+        // Restore the availability slot logic here...
+        await restoreAvailabilitySlot(sessionDate, dayOfWeek, dbTimeFormat, specificDate);
+      }
+
+      // Update local state
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      
+      // Refresh data to show updated availability
+      if (user) {
+        console.log('🔄 Refreshing coach data');
+        await fetchCoachData(user.id);
+      }
+      
+      toast.success("Session cancelled and availability restored");
+    } catch (error) {
+      console.error('💥 Error cancelling session:', error);
+      toast.error('Failed to cancel session');
+    }
+  };
+
+  const restoreAvailabilitySlot = async (sessionDate: Date, dayOfWeek: string, dbTimeFormat: string, specificDate: string) => {
+    // First, try to find and update existing unavailable slots
+    const { data: existingSlots, error: queryError } = await supabase
+      .from('coach_availability')
+      .select('*')
+      .eq('coach_id', coachProfile.id)
+      .eq('day_of_week', dayOfWeek)
+      .eq('start_time', dbTimeFormat)
+      .eq('is_available', false);
+
+    console.log('📍 Found existing unavailable slots:', existingSlots);
+
+    if (existingSlots && existingSlots.length > 0) {
+      // Prefer slots with matching specific date, then fall back to recurring slots
+      const slotToRestore = existingSlots.find(slot => slot.specific_date === specificDate) || existingSlots[0];
+      
+      console.log('📝 Restoring existing slot:', slotToRestore);
+      
+      const { error: updateError } = await supabase
+        .from('coach_availability')
+        .update({ is_available: true })
+        .eq('id', slotToRestore.id);
+      
+      if (updateError) {
+        console.error('❌ Update error:', updateError);
+      } else {
+        console.log('✅ Existing slot restored');
+      }
+    } else {
+      // No existing slot found, create a new one for this specific date
+      console.log('🆕 Creating new availability slot for cancelled session');
+      
+      const endTime = new Date(sessionDate);
+      endTime.setHours(endTime.getHours() + 1); // Default 1-hour session
+      const endTimeFormat = format(endTime, 'HH:mm:ss');
+      
+      const { error: insertError } = await supabase
+        .from('coach_availability')
+        .insert({
+          coach_id: coachProfile.id,
+          day_of_week: dayOfWeek,
+          start_time: dbTimeFormat,
+          end_time: endTimeFormat,
+          specific_date: specificDate,
+          is_available: true
+        });
+      
+      if (insertError) {
+        console.error('❌ Insert error:', insertError);
+      } else {
+        console.log('✅ New availability slot created');
+      }
+    }
+  };
+
   const cancelConfirmedSession = async (sessionId: string) => {
     try {
       console.log('🔥 Cancelling session:', sessionId);
@@ -496,56 +618,74 @@ const CoachDashboard = () => {
         session_date: session.session_date
       });
 
-      // First, try to find and update existing unavailable slots
-      const { data: existingSlots, error: queryError } = await supabase
+      // Check if there's already an available slot at this time/date to avoid duplicates
+      const { data: existingAvailableSlots, error: availCheckError } = await supabase
         .from('coach_availability')
         .select('*')
         .eq('coach_id', coachProfile.id)
         .eq('day_of_week', dayOfWeek)
         .eq('start_time', dbTimeFormat)
-        .eq('is_available', false);
+        .eq('is_available', true);
 
-      console.log('📍 Found existing unavailable slots:', existingSlots);
+      console.log('📍 Found existing available slots:', existingAvailableSlots);
 
-      if (existingSlots && existingSlots.length > 0) {
-        // Prefer slots with matching specific date, then fall back to recurring slots
-        const slotToRestore = existingSlots.find(slot => slot.specific_date === specificDate) || existingSlots[0];
-        
-        console.log('📝 Restoring existing slot:', slotToRestore);
-        
-        const { error: updateError } = await supabase
-          .from('coach_availability')
-          .update({ is_available: true })
-          .eq('id', slotToRestore.id);
-        
-        if (updateError) {
-          console.error('❌ Update error:', updateError);
-        } else {
-          console.log('✅ Existing slot restored');
-        }
+      // Check for exact matches (same date) to prevent duplicates
+      const duplicateSlot = existingAvailableSlots?.find(slot => slot.specific_date === specificDate);
+      
+      if (duplicateSlot) {
+        console.log('⚠️ Duplicate slot already exists, skipping creation');
       } else {
-        // No existing slot found, create a new one for this specific date
-        console.log('🆕 Creating new availability slot for cancelled session');
-        
-        const endTime = new Date(sessionDate);
-        endTime.setHours(endTime.getHours() + 1); // Default 1-hour session
-        const endTimeFormat = format(endTime, 'HH:mm:ss');
-        
-        const { error: insertError } = await supabase
+        // First, try to find and update existing unavailable slots
+        const { data: existingSlots, error: queryError } = await supabase
           .from('coach_availability')
-          .insert({
-            coach_id: coachProfile.id,
-            day_of_week: dayOfWeek,
-            start_time: dbTimeFormat,
-            end_time: endTimeFormat,
-            specific_date: specificDate,
-            is_available: true
-          });
-        
-        if (insertError) {
-          console.error('❌ Insert error:', insertError);
+          .select('*')
+          .eq('coach_id', coachProfile.id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('start_time', dbTimeFormat)
+          .eq('is_available', false);
+
+        console.log('📍 Found existing unavailable slots:', existingSlots);
+
+        if (existingSlots && existingSlots.length > 0) {
+          // Prefer slots with matching specific date, then fall back to recurring slots
+          const slotToRestore = existingSlots.find(slot => slot.specific_date === specificDate) || existingSlots[0];
+          
+          console.log('📝 Restoring existing slot:', slotToRestore);
+          
+          const { error: updateError } = await supabase
+            .from('coach_availability')
+            .update({ is_available: true })
+            .eq('id', slotToRestore.id);
+          
+          if (updateError) {
+            console.error('❌ Update error:', updateError);
+          } else {
+            console.log('✅ Existing slot restored');
+          }
         } else {
-          console.log('✅ New availability slot created');
+          // No existing slot found, create a new one for this specific date
+          console.log('🆕 Creating new availability slot for cancelled session');
+          
+          const endTime = new Date(sessionDate);
+          endTime.setHours(endTime.getHours() + 1); // Default 1-hour session
+          const endTimeFormat = format(endTime, 'HH:mm:ss');
+          
+          const { error: insertError } = await supabase
+            .from('coach_availability')
+            .insert({
+              coach_id: coachProfile.id,
+              day_of_week: dayOfWeek,
+              start_time: dbTimeFormat,
+              end_time: endTimeFormat,
+              specific_date: specificDate,
+              is_available: true
+            });
+          
+          if (insertError) {
+            console.error('❌ Insert error:', insertError);
+          } else {
+            console.log('✅ New availability slot created');
+          }
         }
       }
 
@@ -934,9 +1074,9 @@ const CoachDashboard = () => {
                            <Eye className="h-4 w-4" />
                          </Button>
                        </div>
-                       <p className="text-sm text-muted-foreground">
-                         {format(new Date(session.session_date), 'EEEE, MMMM d, yyyy h:mm a')}
-                       </p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(session.session_date), 'EEEE, MMMM d, yyyy h:mm a')} - {format(new Date(new Date(session.session_date).getTime() + 60 * 60 * 1000), 'h:mm a')}
+                        </p>
                      </div>
                      <div className="flex items-center gap-2">
                        <Badge>Confirmed</Badge>
