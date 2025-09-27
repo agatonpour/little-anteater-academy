@@ -6,6 +6,7 @@ import coachSarah from "@/assets/coach-sarah.jpg";
 import coachMike from "@/assets/coach-mike.jpg";
 import coachEmma from "@/assets/coach-emma.jpg";
 import coachDavid from "@/assets/coach-david.jpg";
+import heroImage from "@/assets/anteater-academy-hero.png";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -20,33 +21,51 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       {/* Header */}
-      <header className="container mx-auto px-6 py-4 flex justify-end items-center">
+      <header className="container mx-auto px-6 py-4 flex justify-end items-center gap-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigate('/coach-login')}
+          className="text-white border-white/20 hover:bg-white/10"
+        >
+          Sign in as Coach
+        </Button>
         <Button variant="academy" onClick={() => navigate('/login')}>
-          Login / Create Account
+          Login
         </Button>
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-6 py-20 text-center">
-        <div className="max-w-4xl mx-auto">
-           <h2 className="text-5xl font-bold mb-6 text-primary">
-             Little Anteater Academy
-           </h2>
-          <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-            [Mission Statement Placeholder - To be updated with your academy's mission, values, and commitment to developing young athletes through personalized training programs.]
-          </p>
-          <div className="flex flex-wrap justify-center gap-8 mt-12">
-            <div className="flex items-center gap-3 text-lg">
-              <Trophy className="h-6 w-6 text-primary" />
-              <span>Championship Training</span>
-            </div>
-            <div className="flex items-center gap-3 text-lg">
-              <Target className="h-6 w-6 text-secondary" />
-              <span>Personalized Goals</span>
-            </div>
-            <div className="flex items-center gap-3 text-lg">
-              <Users className="h-6 w-6 text-primary" />
-              <span>Expert Coaches</span>
+      <section 
+        className="relative min-h-[70vh] flex items-center justify-center"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${heroImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className="container mx-auto px-6 text-center text-white">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-5xl font-bold mb-8 text-white drop-shadow-lg">
+              Little Anteater Academy
+            </h1>
+            <p className="text-xl mb-8 leading-relaxed text-white/90 drop-shadow-md max-w-3xl mx-auto">
+              To inspire and develop the next generation of soccer players in our community by providing high-quality, accessible training led by UC Irvine Men's Soccer athletes. We aim to build skills, confidence, and a lifelong love of the game while giving back to the families who support us and the sport we love.
+            </p>
+            <div className="flex flex-wrap justify-center gap-8 mt-12">
+              <div className="flex items-center gap-3 text-lg text-white/90">
+                <Trophy className="h-6 w-6 text-white" />
+                <span>Championship Training</span>
+              </div>
+              <div className="flex items-center gap-3 text-lg text-white/90">
+                <Target className="h-6 w-6 text-white" />
+                <span>Personalized Goals</span>
+              </div>
+              <div className="flex items-center gap-3 text-lg text-white/90">
+                <Users className="h-6 w-6 text-white" />
+                <span>Expert Coaches</span>
+              </div>
             </div>
           </div>
         </div>
@@ -79,24 +98,14 @@ const Landing = () => {
           <p className="text-lg text-muted-foreground mb-6">
             Ready to start your training journey?
           </p>
-          <div className="flex flex-col gap-4 items-center">
-            <Button 
-              variant="academy" 
-              size="lg" 
-              onClick={() => navigate('/login')}
-              className="text-lg px-8 py-3"
-            >
-              Login / Create Account to Book Session
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/coach-login')}
-              className="text-sm px-6 py-2"
-            >
-              Sign in as Coach
-            </Button>
-          </div>
+          <Button 
+            variant="academy" 
+            size="lg" 
+            onClick={() => navigate('/login')}
+            className="text-lg px-8 py-3"
+          >
+            Login to Book Session
+          </Button>
         </div>
       </section>
     </div>
