@@ -318,17 +318,44 @@ const Dashboard = () => {
 
       if (error) throw error;
 
-      // Restore the availability slot (match by day_of_week and start_time only)
+      // Restore the availability slot 
       const sessionDate = new Date(session.session_date);
       const dayOfWeek = format(sessionDate, 'EEEE');
       const sessionTime = format(sessionDate, 'HH:mm');
+      const specificDate = format(sessionDate, 'yyyy-MM-dd');
 
-      const { error: availabilityError } = await supabase
+      // Try to restore the matching availability slot with specific_date first
+      let { error: availabilityError } = await supabase
         .from('coach_availability')
         .update({ is_available: true })
         .eq('coach_id', session.coach_id)
         .eq('day_of_week', dayOfWeek)
-        .eq('start_time', sessionTime);
+        .eq('start_time', sessionTime)
+        .eq('specific_date', specificDate);
+
+      // If no rows were updated, try without specific_date
+      if (!availabilityError) {
+        const { count } = await supabase
+          .from('coach_availability')
+          .select('*', { count: 'exact', head: true })
+          .eq('coach_id', session.coach_id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('start_time', sessionTime)
+          .eq('specific_date', specificDate)
+          .eq('is_available', true);
+
+        if (count === 0) {
+          const { error: fallbackError } = await supabase
+            .from('coach_availability')
+            .update({ is_available: true })
+            .eq('coach_id', session.coach_id)
+            .eq('day_of_week', dayOfWeek)
+            .eq('start_time', sessionTime)
+            .is('specific_date', null);
+
+          availabilityError = fallbackError;
+        }
+      }
 
       if (availabilityError) {
         console.error('Error restoring availability:', availabilityError);
