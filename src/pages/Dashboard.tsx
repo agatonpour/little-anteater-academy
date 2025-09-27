@@ -213,13 +213,15 @@ const Dashboard = () => {
         // Mark new slot as unavailable
         const newDayOfWeek = format(sessionDate, 'EEEE');
         const newSessionTime = format(sessionDate, 'HH:mm');
+        const newSpecificDate = format(sessionDate, 'yyyy-MM-dd');
 
         await supabase
           .from('coach_availability')
           .update({ is_available: false })
           .eq('coach_id', coachId)
           .eq('day_of_week', newDayOfWeek)
-          .eq('start_time', newSessionTime);
+          .eq('start_time', newSessionTime)
+          .eq('specific_date', newSpecificDate);
 
         toast({
           title: "Session rescheduled!",
@@ -246,13 +248,15 @@ const Dashboard = () => {
         // Mark slot as unavailable
         const dayOfWeek = format(sessionDate, 'EEEE');
         const sessionTime = format(sessionDate, 'HH:mm');
+        const specificDate = format(sessionDate, 'yyyy-MM-dd');
 
         await supabase
           .from('coach_availability')
           .update({ is_available: false })
           .eq('coach_id', coachId)
           .eq('day_of_week', dayOfWeek)
-          .eq('start_time', sessionTime);
+          .eq('start_time', sessionTime)
+          .eq('specific_date', specificDate);
 
         toast({
           title: "Session booked!",
@@ -281,13 +285,15 @@ const Dashboard = () => {
         const sessionDate = new Date(session.session_date);
         const dayOfWeek = format(sessionDate, 'EEEE');
         const sessionTime = format(sessionDate, 'HH:mm');
+        const specificDate = format(sessionDate, 'yyyy-MM-dd');
 
         await supabase
           .from('coach_availability')
           .update({ is_available: true })
           .eq('coach_id', session.coach_id)
           .eq('day_of_week', dayOfWeek)
-          .eq('start_time', sessionTime);
+          .eq('start_time', sessionTime)
+          .eq('specific_date', specificDate);
 
         setReschedulingSession(session);
         setSelectedCoach(coach);
@@ -316,13 +322,15 @@ const Dashboard = () => {
       const sessionDate = new Date(session.session_date);
       const dayOfWeek = format(sessionDate, 'EEEE');
       const sessionTime = format(sessionDate, 'HH:mm');
+      const specificDate = format(sessionDate, 'yyyy-MM-dd');
 
       const { error: availabilityError } = await supabase
         .from('coach_availability')
         .update({ is_available: true })
         .eq('coach_id', session.coach_id)
         .eq('day_of_week', dayOfWeek)
-        .eq('start_time', sessionTime);
+        .eq('start_time', sessionTime)
+        .eq('specific_date', specificDate);
 
       if (availabilityError) {
         console.error('Error restoring availability:', availabilityError);

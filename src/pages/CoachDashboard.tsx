@@ -218,6 +218,7 @@ const CoachDashboard = () => {
         const sessionDate = new Date(session.session_date);
         const dayOfWeek = format(sessionDate, 'EEEE');
         const sessionTime = format(sessionDate, 'HH:mm');
+        const specificDate = format(sessionDate, 'yyyy-MM-dd');
 
         // Find and update the matching availability slot
         const { error: availabilityError } = await supabase
@@ -225,7 +226,8 @@ const CoachDashboard = () => {
           .update({ is_available: false })
           .eq('coach_id', coachProfile.id)
           .eq('day_of_week', dayOfWeek)
-          .eq('start_time', sessionTime);
+          .eq('start_time', sessionTime)
+          .eq('specific_date', specificDate);
 
         if (availabilityError) {
           console.error('Error updating availability:', availabilityError);
@@ -238,13 +240,15 @@ const CoachDashboard = () => {
         const sessionDate = new Date(session.session_date);
         const dayOfWeek = format(sessionDate, 'EEEE');
         const sessionTime = format(sessionDate, 'HH:mm');
+        const specificDate = format(sessionDate, 'yyyy-MM-dd');
 
         const { error: availabilityError } = await supabase
           .from('coach_availability')
           .update({ is_available: true })
           .eq('coach_id', coachProfile.id)
           .eq('day_of_week', dayOfWeek)
-          .eq('start_time', sessionTime);
+          .eq('start_time', sessionTime)
+          .eq('specific_date', specificDate);
 
         if (availabilityError) {
           console.error('Error restoring availability:', availabilityError);
@@ -722,21 +726,18 @@ const CoachDashboard = () => {
                        return slot.is_available;
                      })
                      .map((slot) => (
-                       <div key={slot.id} className="flex justify-between items-center p-2 border rounded">
-                         <div>
-                           <span className="font-medium">
-                             {slot.specific_date 
-                               ? format(new Date(slot.specific_date), 'EEEE, MMMM d') 
-                               : slot.day_of_week}
-                           </span>
-                           <span className="text-muted-foreground ml-2">
-                             {formatTimeDisplay(slot.start_time)} - {formatTimeDisplay(slot.end_time)}
-                           </span>
-                         </div>
-                         <Badge variant="default">
-                           Available
-                         </Badge>
-                       </div>
+                        <div key={slot.id} className="flex justify-between items-center p-2 border rounded">
+                          <div>
+                            <span className="font-medium">
+                              {slot.specific_date 
+                                ? `${format(new Date(slot.specific_date), 'EEEE')}, ${format(new Date(slot.specific_date), 'MMMM d')}, ${formatTimeDisplay(slot.start_time)} - ${formatTimeDisplay(slot.end_time)}`
+                                : `${slot.day_of_week}, ${formatTimeDisplay(slot.start_time)} - ${formatTimeDisplay(slot.end_time)}`}
+                            </span>
+                          </div>
+                          <Badge variant="default">
+                            Available
+                          </Badge>
+                        </div>
                     ))
                 )}
               </div>
