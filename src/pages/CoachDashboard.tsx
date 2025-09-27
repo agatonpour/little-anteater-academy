@@ -265,7 +265,8 @@ const CoachDashboard = () => {
           .from('coach_availability')
           .select('*')
           .eq('coach_id', coachProfile.id)
-          .order('day_of_week');
+          .eq('is_available', true)
+          .order('specific_date', { ascending: true });
 
         if (!fetchError) {
           setAvailability(availabilityData || []);
