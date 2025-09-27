@@ -214,14 +214,31 @@ const Dashboard = () => {
         const newDayOfWeek = format(sessionDate, 'EEEE');
         const newSessionTime = format(sessionDate, 'HH:mm');
         const newSpecificDate = format(sessionDate, 'yyyy-MM-dd');
+        const newDbTimeFormat = `${newSessionTime}:00`;
 
-        await supabase
+        // Find and update the correct availability slot
+        const { data: matchingSlots } = await supabase
           .from('coach_availability')
-          .update({ is_available: false })
+          .select('*')
           .eq('coach_id', coachId)
           .eq('day_of_week', newDayOfWeek)
-          .eq('start_time', newSessionTime)
-          .eq('specific_date', newSpecificDate);
+          .eq('start_time', newDbTimeFormat);
+
+        // Prioritize specific_date match, fallback to recurring slot
+        const slotsWithSpecificDate = matchingSlots?.filter(slot => slot.specific_date === newSpecificDate);
+        const slotsWithoutSpecificDate = matchingSlots?.filter(slot => !slot.specific_date);
+
+        if (slotsWithSpecificDate && slotsWithSpecificDate.length > 0) {
+          await supabase
+            .from('coach_availability')
+            .update({ is_available: false })
+            .eq('id', slotsWithSpecificDate[0].id);
+        } else if (slotsWithoutSpecificDate && slotsWithoutSpecificDate.length > 0) {
+          await supabase
+            .from('coach_availability')
+            .update({ is_available: false })
+            .eq('id', slotsWithoutSpecificDate[0].id);
+        }
 
         toast({
           title: "Session rescheduled!",
@@ -249,14 +266,31 @@ const Dashboard = () => {
         const dayOfWeek = format(sessionDate, 'EEEE');
         const sessionTime = format(sessionDate, 'HH:mm');
         const specificDate = format(sessionDate, 'yyyy-MM-dd');
+        const dbTimeFormat = `${sessionTime}:00`;
 
-        await supabase
+        // Find and update the correct availability slot
+        const { data: matchingSlots } = await supabase
           .from('coach_availability')
-          .update({ is_available: false })
+          .select('*')
           .eq('coach_id', coachId)
           .eq('day_of_week', dayOfWeek)
-          .eq('start_time', sessionTime)
-          .eq('specific_date', specificDate);
+          .eq('start_time', dbTimeFormat);
+
+        // Prioritize specific_date match, fallback to recurring slot
+        const slotsWithSpecificDate = matchingSlots?.filter(slot => slot.specific_date === specificDate);
+        const slotsWithoutSpecificDate = matchingSlots?.filter(slot => !slot.specific_date);
+
+        if (slotsWithSpecificDate && slotsWithSpecificDate.length > 0) {
+          await supabase
+            .from('coach_availability')
+            .update({ is_available: false })
+            .eq('id', slotsWithSpecificDate[0].id);
+        } else if (slotsWithoutSpecificDate && slotsWithoutSpecificDate.length > 0) {
+          await supabase
+            .from('coach_availability')
+            .update({ is_available: false })
+            .eq('id', slotsWithoutSpecificDate[0].id);
+        }
 
         toast({
           title: "Session booked!",
