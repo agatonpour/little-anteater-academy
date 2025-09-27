@@ -23,10 +23,9 @@ const Landing = () => {
       {/* Header */}
       <header className="container mx-auto px-6 py-4 flex justify-between items-center">
         <Button 
-          variant="outline" 
           size="sm" 
           onClick={() => navigate('/coach-login')}
-          className="text-white border-white/20 hover:bg-white/10"
+          className="bg-[hsl(222,84%,27%)] hover:bg-[hsl(222,84%,22%)] text-white"
         >
           Sign in as Coach
         </Button>

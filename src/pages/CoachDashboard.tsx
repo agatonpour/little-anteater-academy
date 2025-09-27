@@ -60,6 +60,7 @@ interface AvailabilitySlot {
   start_time: string;
   end_time: string;
   is_available: boolean;
+  specific_date?: string;
 }
 
 const CoachDashboard = () => {
@@ -179,12 +180,13 @@ const CoachDashboard = () => {
 
       setSessions(sessionsWithProfiles as SessionData[]);
 
-      // Fetch availability
+      // Fetch availability - only show available slots ordered by date
       const { data: availabilityData, error: availabilityError } = await supabase
         .from('coach_availability')
         .select('*')
         .eq('coach_id', coachData.id)
-        .order('day_of_week');
+        .eq('is_available', true)
+        .order('specific_date', { ascending: true });
 
       if (availabilityError) throw availabilityError;
       setAvailability(availabilityData || []);
@@ -305,6 +307,7 @@ const CoachDashboard = () => {
           day_of_week: dayOfWeek,
           start_time: startTime,
           end_time: endTime,
+          specific_date: format(selectedDate, 'yyyy-MM-dd'),
           is_available: true
         });
 
@@ -332,11 +335,13 @@ const CoachDashboard = () => {
 
   const uploadProfileImage = async (file: File): Promise<string> => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
+    const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
     
     const { error: uploadError } = await supabase.storage
       .from('coach-images')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        upsert: true
+      });
 
     if (uploadError) throw uploadError;
 
@@ -703,23 +708,35 @@ const CoachDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {availability.filter(slot => slot.is_available).length === 0 ? (
+                {availability.length === 0 ? (
                   <p className="text-muted-foreground text-center py-4">No availability set</p>
                 ) : (
-                  availability
-                    .filter(slot => slot.is_available)
-                    .map((slot) => (
-                      <div key={slot.id} className="flex justify-between items-center p-2 border rounded">
-                        <div>
-                          <span className="font-medium">{slot.day_of_week}</span>
-                          <span className="text-muted-foreground ml-2">
-                            {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
-                          </span>
-                        </div>
-                        <Badge variant="default">
-                          Available
-                        </Badge>
-                      </div>
+                   availability
+                     .filter(slot => {
+                       // Filter out past dates
+                       if (slot.specific_date) {
+                         const today = new Date();
+                         today.setHours(0,0,0,0);
+                         return new Date(slot.specific_date) >= today;
+                       }
+                       return slot.is_available;
+                     })
+                     .map((slot) => (
+                       <div key={slot.id} className="flex justify-between items-center p-2 border rounded">
+                         <div>
+                           <span className="font-medium">
+                             {slot.specific_date 
+                               ? format(new Date(slot.specific_date), 'EEEE, MMMM d') 
+                               : slot.day_of_week}
+                           </span>
+                           <span className="text-muted-foreground ml-2">
+                             {formatTimeDisplay(slot.start_time)} - {formatTimeDisplay(slot.end_time)}
+                           </span>
+                         </div>
+                         <Badge variant="default">
+                           Available
+                         </Badge>
+                       </div>
                     ))
                 )}
               </div>
@@ -772,9 +789,18 @@ const CoachDashboard = () => {
                   }}
                 />
                 {profileImage && (
-                  <p className="text-sm text-muted-foreground">
-                    Selected: {profileImage.name}
-                  </p>
+                  <div className="flex items-center justify-between p-2 bg-muted rounded">
+                    <p className="text-sm text-muted-foreground">
+                      Selected: {profileImage.name}
+                    </p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setProfileImage(null)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 )}
               </div>
               <div className="space-y-2">

@@ -106,7 +106,8 @@ const Dashboard = () => {
             day_of_week,
             start_time,
             end_time,
-            is_available
+            is_available,
+            specific_date
           )
         `)
         .not('user_id', 'is', null) // Only get coaches linked to users
@@ -118,15 +119,39 @@ const Dashboard = () => {
       const transformedCoaches = (coachesData || []).map(coach => ({
         ...coach,
         available_times: coach.coach_availability
-          ?.filter(slot => slot.is_available)
+          ?.filter(slot => {
+            // Filter available slots and exclude past dates
+            if (!slot.is_available) return false;
+            if (slot.specific_date) {
+              const today = new Date();
+              today.setHours(0,0,0,0);
+              return new Date(slot.specific_date) >= today;
+            }
+            return true;
+          })
+          .sort((a, b) => {
+            // Sort by specific_date first, then by day_of_week
+            if (a.specific_date && b.specific_date) {
+              return new Date(a.specific_date).getTime() - new Date(b.specific_date).getTime();
+            }
+            return 0;
+          })
           .map(slot => {
-            // Format time slots as "Day HH:MM AM/PM"
+            // Format time slots with dates
             const startTime = new Date(`2000-01-01T${slot.start_time}`);
             const formattedTime = startTime.toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
               hour12: true
             });
+            
+            if (slot.specific_date) {
+              const date = new Date(slot.specific_date);
+              const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+              const dateStr = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+              return `${dayName} ${dateStr} ${formattedTime}`;
+            }
+            
             return `${slot.day_of_week} ${formattedTime}`;
           }) || []
       }));
@@ -279,10 +304,10 @@ const Dashboard = () => {
         throw new Error('Session not found');
       }
 
-      // Update session status to cancelled instead of deleting
+      // Delete the session completely instead of just updating status
       const { error } = await supabase
         .from('sessions')
-        .update({ status: 'cancelled' })
+        .delete()
         .eq('id', sessionId);
 
       if (error) throw error;
@@ -440,13 +465,13 @@ const Dashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {sessions.filter(s => new Date(s.session_date) > new Date()).length === 0 ? (
+                {sessions.filter(s => new Date(s.session_date) > new Date() && s.status !== 'cancelled').length === 0 ? (
                   <p className="text-muted-foreground">No upcoming sessions scheduled.</p>
                 ) : (
                   <div className="space-y-3">
-                    {sessions
-                      .filter(s => new Date(s.session_date) > new Date())
-                      .map((session) => (
+                     {sessions
+                       .filter(s => new Date(s.session_date) > new Date() && s.status !== 'cancelled')
+                       .map((session) => (
                         <div key={session.id} className="flex justify-between items-center p-3 border rounded-lg">
                           <div>
                             <p className="font-medium">{session.coaches?.name}</p>
@@ -507,7 +532,7 @@ const Dashboard = () => {
                               {format(new Date(session.session_date), "h:mm a")}
                             </p>
                           </div>
-                          <Badge variant="outline">{session.status}</Badge>
+                          {/* Remove status badge from past sessions */}
                         </div>
                       ))}
                   </div>
