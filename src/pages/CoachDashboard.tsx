@@ -459,19 +459,28 @@ const CoachDashboard = () => {
 
   const cancelConfirmedSession = async (sessionId: string) => {
     try {
+      console.log('🔥 Cancelling session:', sessionId);
       const session = sessions.find(s => s.id === sessionId);
       if (!session) {
         toast.error('Session not found');
         return;
       }
 
-      // Delete the session
-      const { error } = await supabase
+      console.log('📅 Session to cancel:', session);
+
+      // Delete the session - force delete as coach
+      const { error: deleteError } = await supabase
         .from('sessions')
         .delete()
-        .eq('id', sessionId);
+        .eq('id', sessionId)
+        .eq('coach_id', coachProfile.id);
 
-      if (error) throw error;
+      if (deleteError) {
+        console.error('❌ Delete error:', deleteError);
+        throw deleteError;
+      }
+
+      console.log('✅ Session deleted successfully');
 
       // Restore the availability slot
       const sessionDate = new Date(session.session_date);
@@ -480,34 +489,73 @@ const CoachDashboard = () => {
       const specificDate = format(sessionDate, 'yyyy-MM-dd');
       const dbTimeFormat = `${sessionTime}:00`;
 
+      console.log('🔍 Looking for availability slot to restore:', {
+        coach_id: coachProfile.id,
+        day_of_week: dayOfWeek,
+        start_time: dbTimeFormat,
+        specific_date: specificDate
+      });
+
       // Find and restore the matching availability slot
-      const { data: matchingSlots } = await supabase
+      const { data: matchingSlots, error: queryError } = await supabase
         .from('coach_availability')
         .select('*')
         .eq('coach_id', coachProfile.id)
         .eq('day_of_week', dayOfWeek)
         .eq('start_time', dbTimeFormat);
 
+      if (queryError) {
+        console.error('❌ Query error:', queryError);
+      } else {
+        console.log('📍 Found matching slots:', matchingSlots);
+      }
+
       const slotsWithSpecificDate = matchingSlots?.filter(slot => slot.specific_date === specificDate);
       const slotsWithoutSpecificDate = matchingSlots?.filter(slot => !slot.specific_date);
 
+      console.log('🎯 Slots with specific date:', slotsWithSpecificDate);
+      console.log('🎯 Slots without specific date:', slotsWithoutSpecificDate);
+
       if (slotsWithSpecificDate && slotsWithSpecificDate.length > 0) {
-        await supabase
+        console.log('📝 Restoring slot with specific date');
+        const { error: updateError } = await supabase
           .from('coach_availability')
           .update({ is_available: true })
           .eq('id', slotsWithSpecificDate[0].id);
+        
+        if (updateError) {
+          console.error('❌ Update error (specific date):', updateError);
+        } else {
+          console.log('✅ Slot restored (specific date)');
+        }
       } else if (slotsWithoutSpecificDate && slotsWithoutSpecificDate.length > 0) {
-        await supabase
+        console.log('📝 Restoring slot without specific date');
+        const { error: updateError } = await supabase
           .from('coach_availability')
           .update({ is_available: true })
           .eq('id', slotsWithoutSpecificDate[0].id);
+        
+        if (updateError) {
+          console.error('❌ Update error (no specific date):', updateError);
+        } else {
+          console.log('✅ Slot restored (no specific date)');
+        }
+      } else {
+        console.log('⚠️ No matching availability slots found to restore');
       }
 
+      // Update local state
       setSessions(prev => prev.filter(s => s.id !== sessionId));
-      if (user) fetchCoachData(user.id);
+      
+      // Refresh data
+      if (user) {
+        console.log('🔄 Refreshing coach data');
+        await fetchCoachData(user.id);
+      }
+      
       toast.success("Session cancelled and availability restored");
     } catch (error) {
-      console.error('Error cancelling session:', error);
+      console.error('💥 Error cancelling session:', error);
       toast.error('Failed to cancel session');
     }
   };
