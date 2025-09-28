@@ -122,6 +122,7 @@ const Dashboard = () => {
           bio,
           image_url,
           strengths,
+          user_id,
           coach_availability (
             day_of_week,
             start_time,
@@ -135,8 +136,28 @@ const Dashboard = () => {
 
       if (coachesError) throw coachesError;
 
+      // Get profile information for each coach
+      const coachesWithProfiles = [];
+      for (const coach of (coachesData || [])) {
+        if (coach.user_id) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email, age')
+            .eq('user_id', coach.user_id)
+            .maybeSingle();
+          
+          coachesWithProfiles.push({
+            ...coach,
+            email: profile?.email || null,
+            age: profile?.age || null
+          });
+        } else {
+          coachesWithProfiles.push(coach);
+        }
+      }
+
       // Transform the data to match expected format with available_times array
-      const transformedCoaches = (coachesData || []).map(coach => ({
+      const transformedCoaches = coachesWithProfiles.map(coach => ({
         ...coach,
         available_times: coach.coach_availability
           ?.filter(slot => {
@@ -489,7 +510,7 @@ const Dashboard = () => {
           {/* Soccer Coaches Section */}
           <div className="lg:col-span-2">
             <h2 className="text-2xl font-bold mb-6">Soccer Coaches</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {coaches.map((coach) => (
                 <Card key={coach.id} className="hover:shadow-[var(--academy-shadow)] transition-[var(--transition-smooth)] cursor-pointer" onClick={() => setSelectedCoach(coach)}>
                   <CardContent className="p-0">
@@ -500,9 +521,38 @@ const Dashboard = () => {
                         className="w-full h-full object-cover hover:scale-105 transition-[var(--transition-smooth)]"
                       />
                     </div>
-                    <div className="p-3">
-                      <h3 className="font-semibold text-sm">{coach.name}</h3>
-                      <p className="text-xs text-muted-foreground mb-2">{coach.position ? coach.position.charAt(0).toUpperCase() + coach.position.slice(1) : ""}</p>
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <h3 className="font-semibold text-lg">{coach.name}</h3>
+                        {coach.position && (
+                          <p className="text-sm text-primary font-medium">{coach.position.charAt(0).toUpperCase() + coach.position.slice(1)}</p>
+                        )}
+                        {coach.age && (
+                          <p className="text-sm text-muted-foreground">Age: {coach.age}</p>
+                        )}
+                      </div>
+                      
+                      {coach.bio && (
+                        <div>
+                          <p className="text-sm font-medium">Bio:</p>
+                          <p className="text-xs text-muted-foreground">{coach.bio}</p>
+                        </div>
+                      )}
+                      
+                      {coach.strengths && (
+                        <div>
+                          <p className="text-sm font-medium">Strengths:</p>
+                          <p className="text-xs text-muted-foreground">{coach.strengths}</p>
+                        </div>
+                      )}
+                      
+                      {coach.email && (
+                        <div>
+                          <p className="text-sm font-medium">Contact:</p>
+                          <p className="text-xs text-muted-foreground">{coach.email}</p>
+                        </div>
+                      )}
+                      
                       <Button variant="academy-outline" size="sm" className="w-full text-xs">
                         Book Session
                       </Button>
