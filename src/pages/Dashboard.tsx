@@ -359,7 +359,7 @@ const Dashboard = () => {
       console.log('🔥 Cancelling session:', sessionId);
       const session = sessions.find(s => s.id === sessionId);
       if (!session) {
-        throw new Error('Session not found');
+        return;
       }
 
       console.log('📅 Session to cancel:', session);
@@ -377,31 +377,22 @@ const Dashboard = () => {
 
       console.log('✅ Session deleted successfully');
 
-      // Restore the availability slot (use same logic as coach)
+      // Simply restore availability - no duplicate checking
       const sessionDate = new Date(session.session_date);
       const dayOfWeek = format(sessionDate, 'EEEE');
       const sessionTime = format(sessionDate, 'HH:mm');
       const specificDate = format(sessionDate, 'yyyy-MM-dd');
       const dbTimeFormat = `${sessionTime}:00`;
 
-      // Check if there's already an available slot at this time/date to avoid duplicates
-      const { data: existingAvailableSlots, error: availCheckError } = await supabase
-        .from('coach_availability')
-        .select('*')
-        .eq('coach_id', session.coach_id)
-        .eq('day_of_week', dayOfWeek)
-        .eq('start_time', dbTimeFormat)
-        .eq('is_available', true);
+      console.log('🔍 Restoring availability for:', {
+        coach_id: session.coach_id,
+        dayOfWeek,
+        sessionTime,
+        specificDate,
+        dbTimeFormat
+      });
 
-      // Check for exact matches (same date) to prevent duplicates
-      const duplicateSlot = existingAvailableSlots?.find(slot => slot.specific_date === specificDate);
-      
-      if (duplicateSlot) {
-        console.log('⚠️ Availability slot already exists, no need to create duplicate');
-      } else {
-        console.log('🔍 No duplicate found, proceeding with availability restoration');
-        await restoreAvailabilitySlotPlayer(session.coach_id, sessionDate, dayOfWeek, dbTimeFormat, specificDate);
-      }
+      await restoreAvailabilitySlotPlayer(session.coach_id, sessionDate, dayOfWeek, dbTimeFormat, specificDate);
 
       toast({
         title: "Session cancelled",
@@ -421,7 +412,9 @@ const Dashboard = () => {
   };
 
   const restoreAvailabilitySlotPlayer = async (coachId: string, sessionDate: Date, dayOfWeek: string, dbTimeFormat: string, specificDate: string) => {
-    // First, try to find and update existing unavailable slots
+    console.log('🔄 Starting availability restoration...');
+    
+    // Look for ANY unavailable slot that matches - don't worry about duplicates
     const { data: existingSlots, error: queryError } = await supabase
       .from('coach_availability')
       .select('*')
@@ -433,10 +426,10 @@ const Dashboard = () => {
     console.log('📍 Found existing unavailable slots:', existingSlots);
 
     if (existingSlots && existingSlots.length > 0) {
-      // Prefer slots with matching specific date, then fall back to recurring slots
+      // Just restore the first matching slot
       const slotToRestore = existingSlots.find(slot => slot.specific_date === specificDate) || existingSlots[0];
       
-      console.log('📝 Restoring existing slot:', slotToRestore);
+      console.log('📝 Restoring slot with ID:', slotToRestore.id);
       
       const { error: updateError } = await supabase
         .from('coach_availability')
@@ -445,33 +438,12 @@ const Dashboard = () => {
       
       if (updateError) {
         console.error('❌ Update error:', updateError);
+        throw updateError;
       } else {
-        console.log('✅ Existing slot restored');
+        console.log('✅ Slot restored successfully');
       }
     } else {
-      // No existing slot found, create a new one for this specific date
-      console.log('🆕 Creating new availability slot for cancelled session');
-      
-      const endTime = new Date(sessionDate);
-      endTime.setHours(endTime.getHours() + 1); // Default 1-hour session
-      const endTimeFormat = format(endTime, 'HH:mm:ss');
-      
-      const { error: insertError } = await supabase
-        .from('coach_availability')
-        .insert({
-          coach_id: coachId,
-          day_of_week: dayOfWeek,
-          start_time: dbTimeFormat,
-          end_time: endTimeFormat,
-          specific_date: specificDate,
-          is_available: true
-        });
-      
-      if (insertError) {
-        console.error('❌ Insert error:', insertError);
-      } else {
-        console.log('✅ New availability slot created');
-      }
+      console.log('⚠️ No existing unavailable slots found - this slot may have been manually removed');
     }
   };
 
