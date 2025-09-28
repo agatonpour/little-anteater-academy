@@ -364,10 +364,10 @@ const Dashboard = () => {
 
       console.log('🗑️ Cancelling session:', session);
 
-      // Delete the session completely instead of just updating status
+      // Update session status to cancelled instead of deleting
       const { error } = await supabase
         .from('sessions')
-        .delete()
+        .update({ status: 'cancelled' })
         .eq('id', sessionId);
 
       if (error) throw error;
@@ -394,7 +394,7 @@ const Dashboard = () => {
         .eq('start_time', `${sessionTime}:00`)
         .eq('specific_date', specificDate);
 
-      console.log('🔍 Found availability slots:', availabilitySlots);
+      console.log('🔍 Found availability slots with specific date:', availabilitySlots);
 
       if (findError) {
         console.error('❌ Error finding availability slot:', findError);
@@ -423,6 +423,8 @@ const Dashboard = () => {
           .eq('day_of_week', dayOfWeek)
           .eq('start_time', `${sessionTime}:00`)
           .is('specific_date', null);
+
+        console.log('🔍 Found recurring slots:', recurringSlots);
 
         if (recurringError) {
           console.error('❌ Error finding recurring slot:', recurringError);
