@@ -55,6 +55,7 @@ const Index = () => {
           };
         });
 
+        console.log('Coaches with profiles loaded:', coachesWithProfiles);
         setCoaches(coachesWithProfiles);
       } catch (error) {
         console.error('Error loading coaches:', error);
