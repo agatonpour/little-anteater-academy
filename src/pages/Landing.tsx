@@ -2,21 +2,34 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Trophy, Target, Users } from "lucide-react";
-import coachSarah from "@/assets/coach-sarah.jpg";
-import coachMike from "@/assets/coach-mike.jpg";
-import coachEmma from "@/assets/coach-emma.jpg";
-import coachDavid from "@/assets/coach-david.jpg";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import heroImage from "@/assets/anteater-academy-hero.png";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const [coaches, setCoaches] = useState<any[]>([]);
 
-  const coaches = [
-    { name: "Coach Sarah Martinez", position: "Head Soccer Coach", image: coachSarah },
-    { name: "Coach Mike Rodriguez", position: "Goalkeeper Coach", image: coachMike },
-    { name: "Coach Emma Thompson", position: "Youth Development", image: coachEmma },
-    { name: "Coach David Park", position: "Fitness & Conditioning", image: coachDavid },
-  ];
+  useEffect(() => {
+    const fetchCoaches = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('coaches')
+          .select('*');
+        
+        if (error) {
+          console.error('Error fetching coaches:', error);
+          return;
+        }
+        
+        setCoaches(data || []);
+      } catch (error) {
+        console.error('Error fetching coaches:', error);
+      }
+    };
+
+    fetchCoaches();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
@@ -80,13 +93,13 @@ const Landing = () => {
           {coaches.map((coach, index) => (
             <Card key={index} className="group hover:shadow-[var(--academy-shadow)] transition-[var(--transition-smooth)] overflow-hidden">
               <CardContent className="p-0">
-                <div className="aspect-square overflow-hidden">
-                  <img
-                    src={coach.image}
-                    alt={coach.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-[var(--transition-smooth)]"
-                  />
-                </div>
+                 <div className="aspect-square overflow-hidden">
+                   <img
+                     src={coach.image_url || "/placeholder.svg"}
+                     alt={coach.name}
+                     className="w-full h-full object-cover group-hover:scale-105 transition-[var(--transition-smooth)]"
+                   />
+                 </div>
                 <div className="p-6 text-center">
                   <h4 className="font-semibold text-lg mb-2">{coach.name}</h4>
                   <p className="text-muted-foreground">{coach.position}</p>
@@ -105,7 +118,7 @@ const Landing = () => {
             onClick={() => navigate('/login')}
             className="bg-[hsl(222,84%,27%)] hover:bg-[hsl(222,84%,22%)] text-white text-lg px-8 py-3"
           >
-            Login /Create Account to Book Session
+            Login / Create Account to Book Session
           </Button>
         </div>
       </section>
