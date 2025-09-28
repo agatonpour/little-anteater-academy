@@ -29,6 +29,7 @@ export const signUp = async (email: string, password: string, userData: {
       .insert({
         user_id: data.user.id,
         role: 'player',
+        email: email, // Store email in profile
         ...userData,
       });
 

@@ -814,6 +814,7 @@ const CoachDashboard = () => {
               <div className="flex-1 space-y-2">
                 <h3 className="text-xl font-semibold">{coachProfile.name}</h3>
                 <p className="text-muted-foreground">{coachProfile.position ? coachProfile.position.charAt(0).toUpperCase() + coachProfile.position.slice(1) : ""}</p>
+                {user?.email && <p className="text-sm"><strong>Email:</strong> {user.email}</p>}
                 {coachAge && <p className="text-sm"><strong>Age:</strong> {coachAge}</p>}
                 <p className="text-sm"><strong>Strengths:</strong> {coachProfile.strengths}</p>
                 <p className="text-sm">{coachProfile.bio}</p>

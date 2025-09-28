@@ -192,7 +192,11 @@ const Dashboard = () => {
         .from('sessions')
         .select(`
           *,
-          coaches (name, position)
+          coaches (
+            name, 
+            position,
+            profiles!inner(email)
+          )
         `)
         .eq('user_id', currentUser.id)
         .order('session_date');
@@ -547,32 +551,30 @@ const Dashboard = () => {
                      {sessions
                        .filter(s => new Date(s.session_date) > new Date() && s.status !== 'cancelled')
                        .map((session) => (
-                        <div key={session.id} className="flex justify-between items-center p-3 border rounded-lg">
-                          <div>
-                            <p className="font-medium">{session.coaches?.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(session.session_date), "EEEE, MMMM d, yyyy")}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(session.session_date), "h:mm a")}
-                            </p>
+                        <div key={session.id} className="p-3 border rounded-lg">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="font-medium">{session.coaches?.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(session.session_date), "EEEE, MMMM d, yyyy")}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(session.session_date), "h:mm a")}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">{session.status}</Badge>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                onClick={() => cancelSession(session.id)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{session.status}</Badge>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => rescheduleSession(session.id)}
-                            >
-                              Reschedule
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => cancelSession(session.id)}
-                            >
-                              Cancel
-                            </Button>
+                          <div className="text-sm text-muted-foreground border-t pt-2">
+                            Need to reschedule? Contact coach at <strong>{session.coaches?.profiles?.email || 'Contact through admin'}</strong>
                           </div>
                         </div>
                       ))}
@@ -625,6 +627,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
+                  <div><strong>Email:</strong> {profile?.email || user?.email}</div>
                   <div><strong>Name:</strong> {profile?.name}</div>
                   <div><strong>Age:</strong> {profile?.age}</div>
                   <div><strong>Position:</strong> {profile?.position}</div>
