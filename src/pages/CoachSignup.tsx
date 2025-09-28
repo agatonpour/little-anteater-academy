@@ -20,20 +20,34 @@ const CoachSignup = () => {
     position: "",
     strengths: "",
     bio: "",
-    image: null as File | null
+    image: null as File | null,
+    accessCode: ""
   });
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email || !formData.password || !formData.name || !formData.image) {
-      toast.error("Please fill in all required fields including uploading your photo");
+    if (!formData.email || !formData.password || !formData.name || !formData.image || !formData.accessCode) {
+      toast.error("Please fill in all required fields including the coach access code");
       return;
     }
 
     setIsLoading(true);
 
     try {
+      // First verify the coach access code
+      const { data: codeData, error: codeError } = await supabase
+        .from('coach_access_codes')
+        .select('id')
+        .eq('code', formData.accessCode.toUpperCase())
+        .eq('is_active', true)
+        .single();
+
+      if (codeError || !codeData) {
+        toast.error("Invalid coach access code. Please contact an administrator.");
+        setIsLoading(false);
+        return;
+      }
       const redirectUrl = `${window.location.origin}/coach-dashboard`;
       
       // Sign up the user
@@ -95,7 +109,7 @@ const CoachSignup = () => {
 
         if (coachError) throw coachError;
 
-        toast.success("Coach account created successfully! Please check your email to verify your account.");
+        toast.success("Coach account created successfully! Please check your email to verify your account before signing in.");
         navigate("/coach-login");
       }
     } catch (error) {
@@ -136,7 +150,26 @@ const CoachSignup = () => {
                 value={formData.password}
                 onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                 required
+                minLength={8}
               />
+              <p className="text-xs text-muted-foreground">
+                Must be at least 8 characters long
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="accessCode">Coach Access Code *</Label>
+              <Input
+                id="accessCode"
+                type="text"
+                placeholder="Enter coach access code"
+                value={formData.accessCode}
+                onChange={(e) => setFormData(prev => ({ ...prev, accessCode: e.target.value }))}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Special code required to create a coach account
+              </p>
             </div>
 
             <div className="space-y-2">

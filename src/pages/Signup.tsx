@@ -47,9 +47,9 @@ const Signup = () => {
       
       toast({
         title: "Account created successfully!",
-        description: "Welcome to Little Anteater Academy. You can now book training sessions.",
+        description: "Please check your email to verify your account before signing in.",
       });
-      navigate('/dashboard');
+      navigate('/login');
     } catch (error: any) {
       toast({
         title: "Signup failed",
@@ -111,7 +111,11 @@ const Signup = () => {
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   placeholder="Create a password"
                   required
+                  minLength={8}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Must be at least 8 characters long
+                </p>
               </div>
 
               <div className="space-y-2">
