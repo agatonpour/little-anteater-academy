@@ -25,7 +25,6 @@ const Landing = () => {
           return;
         }
         
-        console.log('Fetched coaches from database:', data);
         setCoaches(data || []);
       } catch (error) {
         console.error('Error fetching coaches:', error);
