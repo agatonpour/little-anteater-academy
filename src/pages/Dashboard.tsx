@@ -195,6 +195,8 @@ const Dashboard = () => {
           coaches (
             name, 
             position,
+            bio,
+            strengths,
             user_id
           )
         `)
@@ -203,29 +205,30 @@ const Dashboard = () => {
       
       if (error) throw error;
 
-      // Get coach emails separately since there's no direct FK relationship
-      const sessions_with_emails = [];
+      // Get coach emails and additional profile info separately since there's no direct FK relationship
+      const sessions_with_profiles = [];
       for (const session of (data || [])) {
         if (session.coaches?.user_id) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('email')
+            .select('email, age')
             .eq('user_id', session.coaches.user_id)
             .maybeSingle();
           
-          sessions_with_emails.push({
+          sessions_with_profiles.push({
             ...session,
             coaches: {
               ...session.coaches,
-              email: profile?.email || null
+              email: profile?.email || null,
+              age: profile?.age || null
             }
           });
         } else {
-          sessions_with_emails.push(session);
+          sessions_with_profiles.push(session);
         }
       }
 
-      setSessions(sessions_with_emails);
+      setSessions(sessions_with_profiles);
     } catch (error) {
       console.error('Error loading sessions:', error);
     }
@@ -574,10 +577,16 @@ const Dashboard = () => {
                      {sessions
                        .filter(s => new Date(s.session_date) > new Date() && s.status !== 'cancelled')
                        .map((session) => (
-                        <div key={session.id} className="p-3 border rounded-lg">
+                        <div key={session.id} className="p-4 border rounded-lg">
                           <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <p className="font-medium">{session.coaches?.name}</p>
+                            <div className="space-y-1">
+                              <p className="font-medium text-lg">{session.coaches?.name}</p>
+                              {session.coaches?.position && (
+                                <p className="text-sm font-medium text-primary">{session.coaches.position}</p>
+                              )}
+                              {session.coaches?.age && (
+                                <p className="text-sm text-muted-foreground">Age: {session.coaches.age}</p>
+                              )}
                               <p className="text-sm text-muted-foreground">
                                 {format(new Date(session.session_date), "EEEE, MMMM d, yyyy")}
                               </p>
@@ -596,6 +605,24 @@ const Dashboard = () => {
                               </Button>
                             </div>
                           </div>
+                          
+                          {(session.coaches?.bio || session.coaches?.strengths) && (
+                            <div className="space-y-2 mb-3">
+                              {session.coaches?.bio && (
+                                <div>
+                                  <p className="text-sm font-medium">Bio:</p>
+                                  <p className="text-sm text-muted-foreground">{session.coaches.bio}</p>
+                                </div>
+                              )}
+                              {session.coaches?.strengths && (
+                                <div>
+                                  <p className="text-sm font-medium">Strengths:</p>
+                                  <p className="text-sm text-muted-foreground">{session.coaches.strengths}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
                           <div className="text-sm text-muted-foreground border-t pt-2">
                             Need to reschedule? Contact coach at <strong>{session.coaches?.email || 'Contact through admin'}</strong>
                           </div>
