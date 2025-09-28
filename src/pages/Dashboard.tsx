@@ -377,7 +377,7 @@ const Dashboard = () => {
 
       console.log('✅ Session deleted successfully');
 
-      // Restore the availability slot
+      // Restore the availability slot (use same logic as coach)
       const sessionDate = new Date(session.session_date);
       const dayOfWeek = format(sessionDate, 'EEEE');
       const sessionTime = format(sessionDate, 'HH:mm');
@@ -400,7 +400,7 @@ const Dashboard = () => {
         console.log('⚠️ Availability slot already exists, no need to create duplicate');
       } else {
         console.log('🔍 No duplicate found, proceeding with availability restoration');
-        await restoreAvailabilitySlot(session.coach_id, sessionDate, dayOfWeek, dbTimeFormat, specificDate);
+        await restoreAvailabilitySlotPlayer(session.coach_id, sessionDate, dayOfWeek, dbTimeFormat, specificDate);
       }
 
       toast({
@@ -420,7 +420,7 @@ const Dashboard = () => {
     }
   };
 
-  const restoreAvailabilitySlot = async (coachId: string, sessionDate: Date, dayOfWeek: string, dbTimeFormat: string, specificDate: string) => {
+  const restoreAvailabilitySlotPlayer = async (coachId: string, sessionDate: Date, dayOfWeek: string, dbTimeFormat: string, specificDate: string) => {
     // First, try to find and update existing unavailable slots
     const { data: existingSlots, error: queryError } = await supabase
       .from('coach_availability')
