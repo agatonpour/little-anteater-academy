@@ -195,14 +195,35 @@ const Dashboard = () => {
           coaches (
             name, 
             position,
-            profiles!inner(email)
+            user_id
           )
         `)
         .eq('user_id', currentUser.id)
         .order('session_date');
       
       if (error) throw error;
-      setSessions(data || []);
+
+      // Get coach emails separately since there's no direct FK relationship
+      const sessions_with_emails = await Promise.all((data || []).map(async (session) => {
+        if (session.coaches?.user_id) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('user_id', session.coaches.user_id)
+            .single();
+          
+          return {
+            ...session,
+            coaches: {
+              ...session.coaches,
+              email: profile?.email
+            }
+          };
+        }
+        return session;
+      }));
+
+      setSessions(sessions_with_emails);
     } catch (error) {
       console.error('Error loading sessions:', error);
     }
@@ -574,7 +595,7 @@ const Dashboard = () => {
                             </div>
                           </div>
                           <div className="text-sm text-muted-foreground border-t pt-2">
-                            Need to reschedule? Contact coach at <strong>{session.coaches?.profiles?.email || 'Contact through admin'}</strong>
+                            Need to reschedule? Contact coach at <strong>{session.coaches?.email || 'Contact through admin'}</strong>
                           </div>
                         </div>
                       ))}
