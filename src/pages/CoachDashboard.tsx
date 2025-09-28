@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Clock, User, CheckCircle, XCircle, Plus, Settings, LogOut, Eye, Edit, CalendarIcon } from "lucide-react";
+import { Calendar, Clock, User, CheckCircle, XCircle, Plus, Settings, LogOut, Info, Edit, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -169,11 +169,15 @@ const CoachDashboard = () => {
             .from('profiles')
             .select('name, position, age, gender, goals, team, area')
             .eq('user_id', session.user_id)
-            .single();
+            .maybeSingle();
+
+          if (profileError) {
+            console.error('Error fetching profile for user:', session.user_id, profileError);
+          }
 
           return {
             ...session,
-            profiles: profileError ? null : profile
+            profiles: profile
           };
         })
       );
@@ -838,7 +842,7 @@ const CoachDashboard = () => {
                               onClick={() => viewPlayerDetails(session.user_id)}
                               className="h-6 w-6 p-0"
                             >
-                              <Eye className="h-4 w-4" />
+                            <Info className="h-4 w-4" />
                             </Button>
                           </div>
                           <p className="text-sm text-muted-foreground">{session.profiles?.position || 'Unknown Position'}</p>
@@ -1071,7 +1075,7 @@ const CoachDashboard = () => {
                            onClick={() => viewPlayerDetails(session.user_id)}
                            className="h-6 w-6 p-0"
                          >
-                           <Eye className="h-4 w-4" />
+                           <Info className="h-4 w-4" />
                          </Button>
                        </div>
                         <p className="text-sm text-muted-foreground">
