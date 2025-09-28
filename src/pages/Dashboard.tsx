@@ -236,9 +236,7 @@ const Dashboard = () => {
             .eq('user_id', session.coaches.user_id)
             .maybeSingle();
           
-          console.log('Found profile for coach:', session.coaches.user_id, profile);
-          
-          sessions_with_profiles.push({
+           sessions_with_profiles.push({
             ...session,
             coaches: {
               ...session.coaches,
@@ -251,7 +249,6 @@ const Dashboard = () => {
         }
       }
 
-      console.log('Sessions with profiles:', sessions_with_profiles);
       setSessions(sessions_with_profiles);
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -631,16 +628,17 @@ const Dashboard = () => {
                        .filter(s => new Date(s.session_date) > new Date() && s.status !== 'cancelled')
                        .map((session) => (
                         <div key={session.id} className="p-3 border rounded-lg">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <p className="font-medium">{session.coaches?.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {format(new Date(session.session_date), "EEEE, MMMM d, yyyy")}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {format(new Date(session.session_date), "h:mm a")}
-                              </p>
-                            </div>
+                           <div className="flex justify-between items-start mb-3">
+                             <div>
+                               <p className="font-medium">{session.coaches?.name}</p>
+                               <p className="text-sm text-muted-foreground">{session.coaches?.email || 'No email available'}</p>
+                               <p className="text-sm text-muted-foreground">
+                                 {format(new Date(session.session_date), "EEEE, MMMM d, yyyy")}
+                               </p>
+                               <p className="text-sm text-muted-foreground">
+                                 {format(new Date(session.session_date), "h:mm a")}
+                               </p>
+                             </div>
                             <div className="flex items-center gap-2">
                               <Badge variant="secondary">{session.status}</Badge>
                               <Button 
