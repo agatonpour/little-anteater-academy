@@ -180,11 +180,6 @@ const Dashboard = () => {
       setCoaches(transformedCoaches);
     } catch (error) {
       console.error('Error loading coaches:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load coaches",
-        variant: "destructive"
-      });
     }
   };
 
@@ -261,10 +256,6 @@ const Dashboard = () => {
             .eq('id', slotsWithoutSpecificDate[0].id);
         }
 
-        toast({
-          title: "Session rescheduled!",
-          description: `Your training session with ${selectedCoach?.name} has been rescheduled to ${timeSlot}.`,
-        });
         
         setReschedulingSession(null);
       } else {
@@ -313,21 +304,27 @@ const Dashboard = () => {
             .eq('id', slotsWithoutSpecificDate[0].id);
         }
 
-        toast({
-          title: "Session booked!",
-          description: `Your training session with ${selectedCoach?.name} has been confirmed for ${timeSlot}.`,
-        });
+        // Show custom session booking dialog
+        const formattedDate = sessionDate ? format(sessionDate, 'EEEE, MMMM d, h:mm a') : timeSlot;
+        
+        // Use a custom alert dialog instead of toast
+        const alertElement = document.createElement('div');
+        alertElement.innerHTML = `
+          <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 24px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 1000; max-width: 400px; border: 1px solid #e2e8f0;">
+            <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 12px; color: #1e293b;">Session Request Sent!</h3>
+            <p style="color: #64748b; margin-bottom: 16px;">Your session request has been sent to <strong>${selectedCoach?.name}</strong> for <strong>${formattedDate}</strong>. Waiting for Coach confirmation.</p>
+            <button onclick="this.parentElement.parentElement.remove()" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500;">OK</button>
+          </div>
+          <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="this.parentElement.remove()"></div>
+        `;
+        document.body.appendChild(alertElement);
       }
 
       setSelectedCoach(null);
       await loadSessions();
       await loadCoaches(); // Refresh coaches to update availability
     } catch (error: any) {
-      toast({
-        title: reschedulingSession ? "Reschedule failed" : "Booking failed",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error:', error);
     }
   };
 
@@ -485,7 +482,7 @@ const Dashboard = () => {
                     </div>
                     <div className="p-3">
                       <h3 className="font-semibold text-sm">{coach.name}</h3>
-                      <p className="text-xs text-muted-foreground mb-2">{coach.position}</p>
+                      <p className="text-xs text-muted-foreground mb-2">{coach.position ? coach.position.charAt(0).toUpperCase() + coach.position.slice(1) : ""}</p>
                       <Button variant="academy-outline" size="sm" className="w-full text-xs">
                         Book Session
                       </Button>

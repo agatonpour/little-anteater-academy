@@ -80,7 +80,7 @@ const Landing = () => {
                 <span>High-Quality Training</span>
               </div>
               <div className="flex items-center gap-3 text-lg text-white/90">
-                <Target className="h-6 w-6 text-white" />
+                <Trophy className="h-6 w-6 text-white" />
                 <span>Personalized Goals</span>
               </div>
               <div className="flex items-center gap-3 text-lg text-white/90">
@@ -113,7 +113,7 @@ const Landing = () => {
                    </div>
                   <div className="p-6 text-center">
                     <h4 className="font-semibold text-lg mb-2">{coach.name}</h4>
-                    <p className="text-muted-foreground">{coach.position}</p>
+                    <p className="text-muted-foreground">{coach.position ? coach.position.charAt(0).toUpperCase() + coach.position.slice(1) : ""}</p>
                   </div>
                 </CardContent>
               </Card>

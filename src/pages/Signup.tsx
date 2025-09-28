@@ -66,11 +66,11 @@ const Signup = () => {
       <div className="w-full max-w-md">
         <Button
           variant="ghost"
-          onClick={() => navigate('/login')}
+          onClick={() => navigate('/')}
           className="mb-6 -ml-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Login
+          Back to Home
         </Button>
 
         <Card className="shadow-[var(--academy-shadow)]">

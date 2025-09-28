@@ -132,7 +132,6 @@ const CoachDashboard = () => {
         .single();
 
       if (profileError || profile?.role !== 'coach') {
-        toast.error("Access denied. This page is for coaches only.");
         navigate('/dashboard');
         return;
       }
@@ -197,7 +196,6 @@ const CoachDashboard = () => {
 
     } catch (error) {
       console.error('Error fetching coach data:', error);
-      toast.error('Failed to load coach data');
     }
   };
 
@@ -206,7 +204,6 @@ const CoachDashboard = () => {
       // Get session details first to find the corresponding availability slot
       const session = sessions.find(s => s.id === sessionId);
       if (!session) {
-        toast.error('Session not found');
         return;
       }
 
@@ -308,10 +305,8 @@ const CoachDashboard = () => {
         }
       }
 
-      toast.success(`Session ${status === 'confirmed' ? 'confirmed' : 'cancelled'} successfully`);
     } catch (error) {
       console.error('Error updating session:', error);
-      toast.error('Failed to update session');
     }
   };
 
@@ -331,7 +326,6 @@ const CoachDashboard = () => {
   const addAvailabilitySlot = async () => {
     if (!selectedDate || !newSlot.start_hour || !newSlot.start_minute || 
         !newSlot.end_hour || !newSlot.end_minute || !coachProfile) {
-      toast.error("Please fill in all fields");
       return;
     }
 
@@ -353,7 +347,6 @@ const CoachDashboard = () => {
 
       if (error) throw error;
 
-      toast.success("Availability added successfully");
       setNewSlot({ 
         date: "",
         start_hour: "", 
@@ -369,7 +362,6 @@ const CoachDashboard = () => {
       if (user) fetchCoachData(user.id);
     } catch (error) {
       console.error('Error adding availability:', error);
-      toast.error('Failed to add availability');
     }
   };
 
@@ -425,13 +417,11 @@ const CoachDashboard = () => {
         })
         .eq('user_id', user.id);
 
-      toast.success("Profile updated successfully");
       setIsEditingProfile(false);
       setProfileImage(null);
       fetchCoachData(user.id);
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
     }
   };
 
@@ -457,7 +447,6 @@ const CoachDashboard = () => {
       setIsViewingPlayer(true);
     } catch (error) {
       console.error('Error fetching player details:', error);
-      toast.error('Failed to load player details');
     }
   };
 
@@ -466,7 +455,6 @@ const CoachDashboard = () => {
       console.log('🔥 Denying/Cancelling session:', sessionId);
       const session = sessions.find(s => s.id === sessionId);
       if (!session) {
-        toast.error('Session not found');
         return;
       }
 
@@ -520,11 +508,8 @@ const CoachDashboard = () => {
         console.log('🔄 Refreshing coach data');
         await fetchCoachData(user.id);
       }
-      
-      toast.success("Session cancelled and availability restored");
     } catch (error) {
       console.error('💥 Error cancelling session:', error);
-      toast.error('Failed to cancel session');
     }
   };
 
@@ -588,7 +573,6 @@ const CoachDashboard = () => {
       console.log('🔥 Cancelling session:', sessionId);
       const session = sessions.find(s => s.id === sessionId);
       if (!session) {
-        toast.error('Session not found');
         return;
       }
 
@@ -701,11 +685,8 @@ const CoachDashboard = () => {
         console.log('🔄 Refreshing coach data');
         await fetchCoachData(user.id);
       }
-      
-      toast.success("Session cancelled and availability restored");
     } catch (error) {
       console.error('💥 Error cancelling session:', error);
-      toast.error('Failed to cancel session');
     }
   };
 
@@ -719,10 +700,8 @@ const CoachDashboard = () => {
       if (error) throw error;
 
       setAvailability(prev => prev.filter(slot => slot.id !== slotId));
-      toast.success("Availability slot removed");
     } catch (error) {
       console.error('Error removing availability slot:', error);
-      toast.error('Failed to remove availability slot');
     }
   };
 
@@ -732,7 +711,6 @@ const CoachDashboard = () => {
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
-      toast.error('Failed to sign out');
     }
   };
 
@@ -782,14 +760,26 @@ const CoachDashboard = () => {
                 <CardDescription>Your profile information as shown to players</CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={() => {
-                setEditProfile({
-                  name: coachProfile.name,
-                  position: coachProfile.position,
-                  strengths: coachProfile.strengths,
-                  bio: coachProfile.bio,
-                  age: "",
-                  gender: ""
-                });
+                // Get coach's profile details from the profiles table
+                const fetchCoachProfile = async () => {
+                  if (user) {
+                    const { data: profile } = await supabase
+                      .from('profiles')
+                      .select('age, gender')
+                      .eq('user_id', user.id)
+                      .single();
+                    
+                    setEditProfile({
+                      name: coachProfile.name,
+                      position: coachProfile.position,
+                      strengths: coachProfile.strengths,
+                      bio: coachProfile.bio,
+                      age: profile?.age?.toString() || "",
+                      gender: profile?.gender || ""
+                    });
+                  }
+                };
+                fetchCoachProfile();
                 setIsEditingProfile(true);
               }}>
                 <Edit className="h-4 w-4 mr-2" />
@@ -810,7 +800,7 @@ const CoachDashboard = () => {
               )}
               <div className="flex-1 space-y-2">
                 <h3 className="text-xl font-semibold">{coachProfile.name}</h3>
-                <p className="text-muted-foreground">{coachProfile.position}</p>
+                <p className="text-muted-foreground">{coachProfile.position ? coachProfile.position.charAt(0).toUpperCase() + coachProfile.position.slice(1) : ""}</p>
                 <p className="text-sm"><strong>Strengths:</strong> {coachProfile.strengths}</p>
                 <p className="text-sm">{coachProfile.bio}</p>
               </div>
@@ -1102,7 +1092,7 @@ const CoachDashboard = () => {
 
         {/* Edit Profile Dialog */}
         <Dialog open={isEditingProfile} onOpenChange={setIsEditingProfile}>
-          <DialogContent>
+          <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Profile</DialogTitle>
               <DialogDescription>Update your coach profile information</DialogDescription>
