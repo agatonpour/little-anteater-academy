@@ -577,16 +577,10 @@ const Dashboard = () => {
                      {sessions
                        .filter(s => new Date(s.session_date) > new Date() && s.status !== 'cancelled')
                        .map((session) => (
-                        <div key={session.id} className="p-4 border rounded-lg">
+                        <div key={session.id} className="p-3 border rounded-lg">
                           <div className="flex justify-between items-start mb-3">
-                            <div className="space-y-1">
-                              <p className="font-medium text-lg">{session.coaches?.name}</p>
-                              {session.coaches?.position && (
-                                <p className="text-sm font-medium text-primary">{session.coaches.position}</p>
-                              )}
-                              {session.coaches?.age && (
-                                <p className="text-sm text-muted-foreground">Age: {session.coaches.age}</p>
-                              )}
+                            <div>
+                              <p className="font-medium">{session.coaches?.name}</p>
                               <p className="text-sm text-muted-foreground">
                                 {format(new Date(session.session_date), "EEEE, MMMM d, yyyy")}
                               </p>
@@ -605,24 +599,6 @@ const Dashboard = () => {
                               </Button>
                             </div>
                           </div>
-                          
-                          {(session.coaches?.bio || session.coaches?.strengths) && (
-                            <div className="space-y-2 mb-3">
-                              {session.coaches?.bio && (
-                                <div>
-                                  <p className="text-sm font-medium">Bio:</p>
-                                  <p className="text-sm text-muted-foreground">{session.coaches.bio}</p>
-                                </div>
-                              )}
-                              {session.coaches?.strengths && (
-                                <div>
-                                  <p className="text-sm font-medium">Strengths:</p>
-                                  <p className="text-sm text-muted-foreground">{session.coaches.strengths}</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
                           <div className="text-sm text-muted-foreground border-t pt-2">
                             Need to reschedule? Contact coach at <strong>{session.coaches?.email || 'Contact through admin'}</strong>
                           </div>
