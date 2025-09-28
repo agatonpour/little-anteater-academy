@@ -123,6 +123,7 @@ export type Database = {
           age: number | null
           area: string | null
           created_at: string
+          email: string | null
           gender: string | null
           goals: string | null
           id: string
@@ -137,6 +138,7 @@ export type Database = {
           age?: number | null
           area?: string | null
           created_at?: string
+          email?: string | null
           gender?: string | null
           goals?: string | null
           id?: string
@@ -151,6 +153,7 @@ export type Database = {
           age?: number | null
           area?: string | null
           created_at?: string
+          email?: string | null
           gender?: string | null
           goals?: string | null
           id?: string
