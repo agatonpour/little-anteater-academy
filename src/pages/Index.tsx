@@ -104,7 +104,7 @@ const Index = () => {
                 <CardTitle className="text-xl">{coach.name}</CardTitle>
                 {coach.position && (
                   <CardDescription className="text-lg font-medium">
-                    {coach.position}
+                    {coach.position.charAt(0).toUpperCase() + coach.position.slice(1)}
                   </CardDescription>
                 )}
                 {coach.age && (

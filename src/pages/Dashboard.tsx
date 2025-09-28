@@ -236,6 +236,8 @@ const Dashboard = () => {
             .eq('user_id', session.coaches.user_id)
             .maybeSingle();
           
+          console.log('Found profile for coach:', session.coaches.user_id, profile);
+          
           sessions_with_profiles.push({
             ...session,
             coaches: {
@@ -249,6 +251,7 @@ const Dashboard = () => {
         }
       }
 
+      console.log('Sessions with profiles:', sessions_with_profiles);
       setSessions(sessions_with_profiles);
     } catch (error) {
       console.error('Error loading sessions:', error);
