@@ -385,16 +385,17 @@ const Dashboard = () => {
         specificDate
       });
 
-      // First, find the exact availability slot that was used for this session
+      // Find the FIRST UNAVAILABLE slot with the matching criteria - this ensures we're restoring the right one
       const { data: availabilitySlots, error: findError } = await supabase
         .from('coach_availability')
         .select('*')
         .eq('coach_id', session.coach_id)
         .eq('day_of_week', dayOfWeek)
         .eq('start_time', `${sessionTime}:00`)
-        .eq('specific_date', specificDate);
+        .eq('specific_date', specificDate)
+        .eq('is_available', false);  // Only find unavailable slots
 
-      console.log('🔍 Found availability slots with specific date:', availabilitySlots);
+      console.log('🔍 Found unavailable slots with specific date:', availabilitySlots);
 
       if (findError) {
         console.error('❌ Error finding availability slot:', findError);
@@ -402,7 +403,7 @@ const Dashboard = () => {
       }
 
       if (availabilitySlots && availabilitySlots.length > 0) {
-        // Update the specific slot to be available again
+        // Update the first unavailable slot to be available again
         const { error: updateError } = await supabase
           .from('coach_availability')
           .update({ is_available: true })
@@ -413,18 +414,19 @@ const Dashboard = () => {
           throw updateError;
         }
 
-        console.log('✅ Successfully restored availability slot');
+        console.log('✅ Successfully restored availability slot:', availabilitySlots[0].id);
       } else {
-        // If no specific date slot found, try to find a recurring slot
+        // If no specific date slot found, try to find a recurring slot that's unavailable
         const { data: recurringSlots, error: recurringError } = await supabase
           .from('coach_availability')
           .select('*')
           .eq('coach_id', session.coach_id)
           .eq('day_of_week', dayOfWeek)
           .eq('start_time', `${sessionTime}:00`)
-          .is('specific_date', null);
+          .is('specific_date', null)
+          .eq('is_available', false);  // Only find unavailable slots
 
-        console.log('🔍 Found recurring slots:', recurringSlots);
+        console.log('🔍 Found unavailable recurring slots:', recurringSlots);
 
         if (recurringError) {
           console.error('❌ Error finding recurring slot:', recurringError);
@@ -442,9 +444,9 @@ const Dashboard = () => {
             throw updateRecurringError;
           }
 
-          console.log('✅ Successfully restored recurring availability slot');
+          console.log('✅ Successfully restored recurring availability slot:', recurringSlots[0].id);
         } else {
-          console.log('⚠️ No matching availability slot found to restore');
+          console.log('⚠️ No matching unavailable slot found to restore');
         }
       }
 
