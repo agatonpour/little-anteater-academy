@@ -9,22 +9,28 @@ import heroImage from "@/assets/anteater-academy-hero.png";
 const Landing = () => {
   const navigate = useNavigate();
   const [coaches, setCoaches] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchCoaches = async () => {
       try {
+        setIsLoading(true);
         const { data, error } = await supabase
           .from('coaches')
           .select('*');
         
         if (error) {
           console.error('Error fetching coaches:', error);
+          setCoaches([]);
           return;
         }
         
         setCoaches(data || []);
       } catch (error) {
         console.error('Error fetching coaches:', error);
+        setCoaches([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -90,23 +96,33 @@ const Landing = () => {
       <section className="container mx-auto px-6 py-16">
         <h3 className="text-3xl font-bold text-center mb-12 text-secondary">Meet Our Coaches</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-          {coaches.map((coach, index) => (
-            <Card key={index} className="group hover:shadow-[var(--academy-shadow)] transition-[var(--transition-smooth)] overflow-hidden">
-              <CardContent className="p-0">
-                 <div className="aspect-square overflow-hidden">
-                   <img
-                     src={coach.image_url || "/placeholder.svg"}
-                     alt={coach.name}
-                     className="w-full h-full object-cover group-hover:scale-105 transition-[var(--transition-smooth)]"
-                   />
-                 </div>
-                <div className="p-6 text-center">
-                  <h4 className="font-semibold text-lg mb-2">{coach.name}</h4>
-                  <p className="text-muted-foreground">{coach.position}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {isLoading ? (
+            <div className="col-span-full text-center text-muted-foreground">
+              Loading coaches...
+            </div>
+          ) : coaches.length > 0 ? (
+            coaches.map((coach, index) => (
+              <Card key={coach.id || index} className="group hover:shadow-[var(--academy-shadow)] transition-[var(--transition-smooth)] overflow-hidden">
+                <CardContent className="p-0">
+                   <div className="aspect-square overflow-hidden">
+                     <img
+                       src={coach.image_url || "/placeholder.svg"}
+                       alt={coach.name}
+                       className="w-full h-full object-cover group-hover:scale-105 transition-[var(--transition-smooth)]"
+                     />
+                   </div>
+                  <div className="p-6 text-center">
+                    <h4 className="font-semibold text-lg mb-2">{coach.name}</h4>
+                    <p className="text-muted-foreground">{coach.position}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full text-center text-muted-foreground">
+              No coaches available at the moment.
+            </div>
+          )}
         </div>
         
         <div className="text-center mt-12">
