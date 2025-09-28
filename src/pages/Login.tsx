@@ -21,10 +21,6 @@ const Login = () => {
 
     try {
       await signIn(email, password);
-      toast({
-        title: "Welcome back!",
-        description: "Successfully logged in to your account.",
-      });
       navigate('/dashboard');
     } catch (error: any) {
       toast({

@@ -76,7 +76,7 @@ const Landing = () => {
             </p>
             <div className="flex flex-wrap justify-center gap-8 mt-12">
               <div className="flex items-center gap-3 text-lg text-white/90">
-                <Trophy className="h-6 w-6 text-white" />
+                <Target className="h-6 w-6 text-white" />
                 <span>High-Quality Training</span>
               </div>
               <div className="flex items-center gap-3 text-lg text-white/90">

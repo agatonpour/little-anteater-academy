@@ -92,6 +92,7 @@ const CoachDashboard = () => {
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerDetails | null>(null);
   const [isViewingPlayer, setIsViewingPlayer] = useState(false);
+  const [coachAge, setCoachAge] = useState<number | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -145,6 +146,17 @@ const CoachDashboard = () => {
 
       if (coachError) throw coachError;
       setCoachProfile(coachData);
+
+      // Fetch coach's age from profiles table
+      const { data: profileData, error: profileAgeError } = await supabase
+        .from('profiles')
+        .select('age')
+        .eq('user_id', userId)
+        .single();
+
+      if (!profileAgeError && profileData?.age) {
+        setCoachAge(profileData.age);
+      }
 
       // Fetch coach sessions with user profiles
       const { data: sessionsData, error: sessionsError } = await supabase
@@ -419,6 +431,7 @@ const CoachDashboard = () => {
 
       setIsEditingProfile(false);
       setProfileImage(null);
+      setCoachAge(parseInt(editProfile.age) || null);
       fetchCoachData(user.id);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -801,6 +814,7 @@ const CoachDashboard = () => {
               <div className="flex-1 space-y-2">
                 <h3 className="text-xl font-semibold">{coachProfile.name}</h3>
                 <p className="text-muted-foreground">{coachProfile.position ? coachProfile.position.charAt(0).toUpperCase() + coachProfile.position.slice(1) : ""}</p>
+                {coachAge && <p className="text-sm"><strong>Age:</strong> {coachAge}</p>}
                 <p className="text-sm"><strong>Strengths:</strong> {coachProfile.strengths}</p>
                 <p className="text-sm">{coachProfile.bio}</p>
               </div>
