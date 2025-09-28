@@ -30,10 +30,45 @@ const Dashboard = () => {
     'Coach David Park': coachDavid,
   };
 
-  // Helper function to get next occurrence of a weekday
-  const getNextWeekdayDate = (weekdayName: string, timeString: string) => {
+  // Helper function to parse time slot string to exact date
+  const parseTimeSlotToDate = (timeSlot: string) => {
+    // Format: "Tuesday October 7 5:00 PM" or "Tuesday 5:00 PM"
+    const timeMatch = timeSlot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!timeMatch) return null;
+    
+    const [, hoursStr, minutesStr, period] = timeMatch;
+    let hours = parseInt(hoursStr);
+    const minutes = parseInt(minutesStr);
+    
+    if (period.toUpperCase() === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (period.toUpperCase() === 'AM' && hours === 12) {
+      hours = 0;
+    }
+    
+    // Check if it contains a specific date (like "October 7")
+    const monthDateMatch = timeSlot.match(/(\w+)\s+(\d+)/);
+    if (monthDateMatch) {
+      const [, monthName, dayNum] = monthDateMatch;
+      const currentYear = new Date().getFullYear();
+      
+      // Create date from month name and day
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      const monthIndex = monthNames.findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+      
+      if (monthIndex !== -1) {
+        const targetDate = new Date(currentYear, monthIndex, parseInt(dayNum));
+        targetDate.setHours(hours, minutes, 0, 0);
+        return targetDate;
+      }
+    }
+    
+    // Fallback to next weekday logic for slots without specific dates
     const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const targetWeekday = weekdays.findIndex(day => weekdayName.toLowerCase().includes(day.toLowerCase()));
+    const targetWeekday = weekdays.findIndex(day => timeSlot.toLowerCase().includes(day.toLowerCase()));
     
     if (targetWeekday === -1) return null;
     
@@ -45,22 +80,7 @@ const Dashboard = () => {
     if (daysUntil <= 0) daysUntil += 7; // Get next week's occurrence
     
     const targetDate = addDays(today, daysUntil);
-    
-    // Parse time
-    const timeMatch = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-    if (timeMatch) {
-      const [, hoursStr, minutesStr, period] = timeMatch;
-      let hours = parseInt(hoursStr);
-      const minutes = parseInt(minutesStr);
-      
-      if (period.toUpperCase() === 'PM' && hours !== 12) {
-        hours += 12;
-      } else if (period.toUpperCase() === 'AM' && hours === 12) {
-        hours = 0;
-      }
-      
-      targetDate.setHours(hours, minutes, 0, 0);
-    }
+    targetDate.setHours(hours, minutes, 0, 0);
     
     return targetDate;
   };
@@ -191,12 +211,12 @@ const Dashboard = () => {
 
   const bookSession = async (coachId: string, timeSlot: string) => {
     try {
-      // Clean and parse the time slot (e.g., "Tuesday 5:00 PM" or "5:00 PM")
+      // Clean and parse the time slot (e.g., "Tuesday October 7 5:00 PM")
       const timeString = timeSlot.trim();
       console.log('Parsing time slot:', timeString);
       
-      // Use the helper function to get the proper date
-      const sessionDate = getNextWeekdayDate(timeString, timeString);
+      // Parse the date and time from the formatted string
+      const sessionDate = parseTimeSlotToDate(timeString);
       
       if (!sessionDate) {
         throw new Error(`Invalid time format: ${timeString}`);
@@ -488,7 +508,7 @@ const Dashboard = () => {
                   <CardContent>
                     <div className="space-y-2 mb-4">
                       {selectedCoach.available_times?.map((time: string, index: number) => {
-                        const fullDate = getNextWeekdayDate(time, time);
+                        const fullDate = parseTimeSlotToDate(time);
                         const displayText = fullDate 
                           ? format(fullDate, "EEEE, MMMM d, h:mm a")
                           : time;
