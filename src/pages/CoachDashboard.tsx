@@ -195,16 +195,16 @@ const CoachDashboard = () => {
 
       setSessions(sessionsWithProfiles as SessionData[]);
 
-      // Fetch availability - only show available slots ordered by date
+      // Fetch availability - get all slots and filter to show only available ones
       const { data: availabilityData, error: availabilityError } = await supabase
         .from('coach_availability')
         .select('*')
         .eq('coach_id', coachData.id)
-        .eq('is_available', true)
         .order('specific_date', { ascending: true });
 
       if (availabilityError) throw availabilityError;
-      setAvailability(availabilityData || []);
+      // Filter to only show available slots in the UI
+      setAvailability((availabilityData || []).filter(slot => slot.is_available));
 
     } catch (error) {
       console.error('Error fetching coach data:', error);
@@ -306,12 +306,12 @@ const CoachDashboard = () => {
           .from('coach_availability')
           .select('*')
           .eq('coach_id', coachProfile.id)
-          .eq('is_available', true)
           .order('specific_date', { ascending: true });
 
         if (!fetchError) {
           console.log('📊 Updated availability data:', availabilityData);
-          setAvailability(availabilityData || []);
+          // Filter to only show available slots in the UI
+          setAvailability((availabilityData || []).filter(slot => slot.is_available));
         } else {
           console.error('❌ Error fetching updated availability:', fetchError);
         }
