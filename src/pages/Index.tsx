@@ -44,7 +44,7 @@ const Index = () => {
               age = 33;
             } else if (coach.user_id === '8680fd87-d126-49aa-af9f-ad7d0920d183') {
               email = 'isaac.pow@gmail.com';
-              age = null; // Age not set for Isaac
+              age = 25; // Set age for Isaac Powell
             }
           }
           
@@ -96,45 +96,51 @@ const Index = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {coaches.map((coach) => (
-            <Card key={coach.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <CardHeader className="text-center pb-4">
-                <Avatar className="w-24 h-24 mx-auto mb-4">
-                  <AvatarImage src={coach.image_url || ""} alt={coach.name} />
-                  <AvatarFallback className="text-lg">
-                    {coach.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <CardTitle className="text-xl">{coach.name}</CardTitle>
-                {coach.position && (
-                  <CardDescription className="text-lg font-medium">
-                    {coach.position.charAt(0).toUpperCase() + coach.position.slice(1)}
-                  </CardDescription>
-                )}
-                {coach.age && (
-                  <Badge variant="secondary" className="w-fit mx-auto">
-                    Age {coach.age}
-                  </Badge>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {coach.bio && (
+            <Card key={coach.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="p-0">
+                <div className="aspect-square overflow-hidden rounded-t-lg">
+                  <img
+                    src={coach.image_url || ""}
+                    alt={coach.name}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div className="p-4 space-y-3">
                   <div>
-                    <h4 className="font-semibold mb-2">Bio</h4>
-                    <p className="text-sm text-muted-foreground">{coach.bio}</p>
+                    <h3 className="font-semibold text-lg">{coach.name}</h3>
+                    {coach.position && (
+                      <p className="text-sm text-primary font-medium">{coach.position.charAt(0).toUpperCase() + coach.position.slice(1)}</p>
+                    )}
+                    {coach.age && (
+                      <p className="text-sm text-muted-foreground">Age: {coach.age}</p>
+                    )}
                   </div>
-                )}
-                {coach.strengths && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Strengths</h4>
-                    <p className="text-sm text-muted-foreground">{coach.strengths}</p>
-                  </div>
-                )}
-                {coach.email && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Contact</h4>
-                    <p className="text-sm text-muted-foreground">{coach.email}</p>
-                  </div>
-                )}
+                  
+                  {coach.bio && (
+                    <div>
+                      <p className="text-sm font-medium">Bio:</p>
+                      <p className="text-xs text-muted-foreground">{coach.bio}</p>
+                    </div>
+                  )}
+                  
+                  {coach.strengths && (
+                    <div>
+                      <p className="text-sm font-medium">Strengths:</p>
+                      <p className="text-xs text-muted-foreground">{coach.strengths}</p>
+                    </div>
+                  )}
+                  
+                  {coach.email && (
+                    <div>
+                      <p className="text-sm font-medium">Contact:</p>
+                      <p className="text-xs text-muted-foreground">{coach.email}</p>
+                    </div>
+                  )}
+                  
+                  <Button variant="outline" size="sm" className="w-full text-xs">
+                    Book Session
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
