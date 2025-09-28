@@ -204,24 +204,26 @@ const Dashboard = () => {
       if (error) throw error;
 
       // Get coach emails separately since there's no direct FK relationship
-      const sessions_with_emails = await Promise.all((data || []).map(async (session) => {
+      const sessions_with_emails = [];
+      for (const session of (data || [])) {
         if (session.coaches?.user_id) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('email')
             .eq('user_id', session.coaches.user_id)
-            .single();
+            .maybeSingle();
           
-          return {
+          sessions_with_emails.push({
             ...session,
             coaches: {
               ...session.coaches,
-              email: profile?.email
+              email: profile?.email || null
             }
-          };
+          });
+        } else {
+          sessions_with_emails.push(session);
         }
-        return session;
-      }));
+      }
 
       setSessions(sessions_with_emails);
     } catch (error) {
