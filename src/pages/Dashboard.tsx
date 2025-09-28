@@ -362,6 +362,8 @@ const Dashboard = () => {
         throw new Error('Session not found');
       }
 
+      console.log('🗑️ Cancelling session:', session);
+
       // Delete the session completely instead of just updating status
       const { error } = await supabase
         .from('sessions')
@@ -376,44 +378,72 @@ const Dashboard = () => {
       const sessionTime = format(sessionDate, 'HH:mm');
       const specificDate = format(sessionDate, 'yyyy-MM-dd');
 
-      // Fix time format for database query
-      const dbTimeFormat = `${sessionTime}:00`;
-      
-      // Try to restore the matching availability slot with specific_date first
-      let { error: availabilityError } = await supabase
+      console.log('🔍 Looking for availability slot to restore:', {
+        coach_id: session.coach_id,
+        dayOfWeek,
+        sessionTime,
+        specificDate
+      });
+
+      // First, find the exact availability slot that was used for this session
+      const { data: availabilitySlots, error: findError } = await supabase
         .from('coach_availability')
-        .update({ is_available: true })
+        .select('*')
         .eq('coach_id', session.coach_id)
         .eq('day_of_week', dayOfWeek)
-        .eq('start_time', dbTimeFormat)
+        .eq('start_time', `${sessionTime}:00`)
         .eq('specific_date', specificDate);
 
-      // If no rows were updated, try without specific_date
-      if (!availabilityError) {
-        const { count } = await supabase
-          .from('coach_availability')
-          .select('*', { count: 'exact', head: true })
-          .eq('coach_id', session.coach_id)
-          .eq('day_of_week', dayOfWeek)
-          .eq('start_time', dbTimeFormat)
-          .eq('specific_date', specificDate)
-          .eq('is_available', true);
+      console.log('🔍 Found availability slots:', availabilitySlots);
 
-        if (count === 0) {
-          const { error: fallbackError } = await supabase
-            .from('coach_availability')
-            .update({ is_available: true })
-            .eq('coach_id', session.coach_id)
-            .eq('day_of_week', dayOfWeek)
-            .eq('start_time', dbTimeFormat)
-            .is('specific_date', null);
-
-          availabilityError = fallbackError;
-        }
+      if (findError) {
+        console.error('❌ Error finding availability slot:', findError);
+        throw findError;
       }
 
-      if (availabilityError) {
-        console.error('Error restoring availability:', availabilityError);
+      if (availabilitySlots && availabilitySlots.length > 0) {
+        // Update the specific slot to be available again
+        const { error: updateError } = await supabase
+          .from('coach_availability')
+          .update({ is_available: true })
+          .eq('id', availabilitySlots[0].id);
+
+        if (updateError) {
+          console.error('❌ Error updating availability:', updateError);
+          throw updateError;
+        }
+
+        console.log('✅ Successfully restored availability slot');
+      } else {
+        // If no specific date slot found, try to find a recurring slot
+        const { data: recurringSlots, error: recurringError } = await supabase
+          .from('coach_availability')
+          .select('*')
+          .eq('coach_id', session.coach_id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('start_time', `${sessionTime}:00`)
+          .is('specific_date', null);
+
+        if (recurringError) {
+          console.error('❌ Error finding recurring slot:', recurringError);
+          throw recurringError;
+        }
+
+        if (recurringSlots && recurringSlots.length > 0) {
+          const { error: updateRecurringError } = await supabase
+            .from('coach_availability')
+            .update({ is_available: true })
+            .eq('id', recurringSlots[0].id);
+
+          if (updateRecurringError) {
+            console.error('❌ Error updating recurring availability:', updateRecurringError);
+            throw updateRecurringError;
+          }
+
+          console.log('✅ Successfully restored recurring availability slot');
+        } else {
+          console.log('⚠️ No matching availability slot found to restore');
+        }
       }
 
       toast({
@@ -424,6 +454,7 @@ const Dashboard = () => {
       await loadSessions();
       await loadCoaches(); // Refresh coaches to show restored availability
     } catch (error: any) {
+      console.error('❌ Session cancellation error:', error);
       toast({
         title: "Cancellation failed",
         description: error.message || "Please try again.",
