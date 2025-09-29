@@ -26,32 +26,34 @@ const Index = () => {
   useEffect(() => {
     const loadCoaches = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch coaches and their profiles separately since there's no direct foreign key
+        const { data: coachesData, error: coachesError } = await supabase
           .from('coaches')
           .select('*');
         
-        if (error) throw error;
+        if (coachesError) throw coachesError;
 
-        // Add coach emails and ages directly since RLS is preventing profile access
-        const coachesWithProfiles = (data || []).map(coach => {
-          let email = null;
-          let age = null;
-          
-          if (coach.user_id) {
-            // Based on the database query, add the known coach information
-            if (coach.user_id === '15d37282-c1bf-43ba-b90d-c752c86cca0f') {
-              email = 'agatonp@icloud.com';
-              age = 33;
-            } else if (coach.user_id === '8680fd87-d126-49aa-af9f-ad7d0920d183') {
-              email = 'isaac.pow@gmail.com';
-              age = 25; // Set age for Isaac Powell
-            }
-          }
-          
+        // Fetch all profiles for coaches
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, age, email')
+          .eq('role', 'coach');
+
+        if (profilesError) throw profilesError;
+
+        // Create a map of user_id to profile data
+        const profilesMap = new Map();
+        profilesData?.forEach(profile => {
+          profilesMap.set(profile.user_id, profile);
+        });
+
+        // Combine coaches with their profile data
+        const coachesWithProfiles = (coachesData || []).map(coach => {
+          const profile = coach.user_id ? profilesMap.get(coach.user_id) : null;
           return {
             ...coach,
-            email: email,
-            age: age
+            age: profile?.age || null,
+            email: profile?.email || null
           };
         });
 
