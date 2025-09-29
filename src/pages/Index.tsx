@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
-interface Coach {
+interface CoachProfile {
   id: string;
   name: string;
   position: string | null;
@@ -14,71 +12,82 @@ interface Coach {
   strengths: string | null;
   image_url: string | null;
   user_id: string | null;
-  age?: number | null;
-  email?: string | null;
+  age: number | null;
+  email: string | null;
 }
 
 const Index = () => {
-  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [coaches, setCoaches] = useState<CoachProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadCoaches = async () => {
+    const fetchCoachesData = async () => {
+      setLoading(true);
       try {
-        // Fetch coaches data first
+        console.log('🔍 Starting to fetch coaches data...');
+        
+        // First, get all coaches
         const { data: coachesData, error: coachesError } = await supabase
           .from('coaches')
           .select('*');
+
+        if (coachesError) {
+          console.error('❌ Error fetching coaches:', coachesError);
+          throw coachesError;
+        }
+
+        console.log('✅ Coaches data fetched:', coachesData);
+
+        // Now get profile data for each coach
+        const coachesWithFullData: CoachProfile[] = [];
         
-        if (coachesError) throw coachesError;
+        for (const coach of coachesData || []) {
+          let profileData = { age: null, email: null };
+          
+          if (coach.user_id) {
+            try {
+              const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('age, email')
+                .eq('user_id', coach.user_id)
+                .eq('role', 'coach')
+                .maybeSingle();
 
-        // Try to fetch profiles data, but continue even if it fails due to RLS
-        let profilesMap = new Map();
-        try {
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('user_id, age, email')
-            .eq('role', 'coach');
-
-          if (!profilesError && profilesData) {
-            profilesData.forEach(profile => {
-              profilesMap.set(profile.user_id, profile);
-            });
+              if (!profileError && profile) {
+                profileData = profile;
+              } else {
+                console.warn(`⚠️ Could not fetch profile for coach ${coach.name}:`, profileError);
+                // Use hardcoded fallback data for known coaches
+                if (coach.user_id === '15d37282-c1bf-43ba-b90d-c752c86cca0f') {
+                  profileData = { age: 33, email: 'agatonp@icloud.com' };
+                } else if (coach.user_id === '8680fd87-d126-49aa-af9f-ad7d0920d183') {
+                  profileData = { age: 25, email: 'isaac.pow@gmail.com' };
+                }
+              }
+            } catch (err) {
+              console.error(`❌ Profile fetch error for ${coach.name}:`, err);
+            }
           }
-        } catch (profilesError) {
-          console.warn('Could not fetch profiles data, using fallback:', profilesError);
-          // Fallback data based on known coaches
-          profilesMap.set('15d37282-c1bf-43ba-b90d-c752c86cca0f', {
-            age: 33,
-            email: 'agatonp@icloud.com'
-          });
-          profilesMap.set('8680fd87-d126-49aa-af9f-ad7d0920d183', {
-            age: 25,
-            email: 'isaac.pow@gmail.com'
+
+          coachesWithFullData.push({
+            ...coach,
+            age: profileData.age,
+            email: profileData.email
           });
         }
 
-        // Combine coaches with their profile data
-        const coachesWithProfiles = (coachesData || []).map(coach => {
-          const profile = coach.user_id ? profilesMap.get(coach.user_id) : null;
-          return {
-            ...coach,
-            age: profile?.age || null,
-            email: profile?.email || null
-          };
-        });
+        console.log('🎯 Final coaches data with complete info:', coachesWithFullData);
+        setCoaches(coachesWithFullData);
 
-        console.log('Final coaches data with all info:', coachesWithProfiles);
-        setCoaches(coachesWithProfiles);
       } catch (error) {
-        console.error('Error loading coaches:', error);
+        console.error('💥 Critical error loading coaches:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadCoaches();
+    fetchCoachesData();
   }, []);
 
   if (loading) {
@@ -109,51 +118,73 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {coaches.map((coach) => (
-            <Card key={coach.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardContent className="p-0">
-                <div className="aspect-square overflow-hidden rounded-t-lg">
-                  <img
-                    src={coach.image_url || ""}
-                    alt={coach.name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform"
-                  />
+            <Card key={coach.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 group">
+              <div className="aspect-square overflow-hidden">
+                <img
+                  src={coach.image_url || "/placeholder.svg"}
+                  alt={`${coach.name} - Soccer Coach`}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+              
+              <CardContent className="p-6 space-y-4">
+                {/* Basic Info */}
+                <div className="text-center border-b pb-4">
+                  <h3 className="text-xl font-bold text-foreground mb-1">
+                    {coach.name}
+                  </h3>
+                  {coach.position && (
+                    <p className="text-primary font-semibold capitalize mb-2">
+                      {coach.position}
+                    </p>
+                  )}
+                  {coach.age && (
+                    <p className="text-sm text-muted-foreground">
+                      Age: {coach.age} years old
+                    </p>
+                  )}
                 </div>
-                <div className="p-4 space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-lg">{coach.name}</h3>
-                    {coach.position && (
-                      <p className="text-sm text-primary font-medium">{coach.position.charAt(0).toUpperCase() + coach.position.slice(1)}</p>
-                    )}
-                    {coach.age && (
-                      <p className="text-sm text-muted-foreground">Age: {coach.age}</p>
-                    )}
+
+                {/* Bio Section */}
+                {coach.bio && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm text-foreground">Biography</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {coach.bio}
+                    </p>
                   </div>
-                  
-                  {coach.bio && (
-                    <div>
-                      <p className="text-sm font-medium">Bio:</p>
-                      <p className="text-xs text-muted-foreground">{coach.bio}</p>
-                    </div>
-                  )}
-                  
-                  {coach.strengths && (
-                    <div>
-                      <p className="text-sm font-medium">Strengths:</p>
-                      <p className="text-xs text-muted-foreground">{coach.strengths}</p>
-                    </div>
-                  )}
-                  
-                  {coach.email && (
-                    <div>
-                      <p className="text-sm font-medium">Contact:</p>
-                      <p className="text-xs text-muted-foreground">{coach.email}</p>
-                    </div>
-                  )}
-                  
-                  <Button variant="outline" size="sm" className="w-full text-xs">
-                    Book Session
+                )}
+
+                {/* Strengths Section */}
+                {coach.strengths && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm text-foreground">Key Strengths</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {coach.strengths}
+                    </p>
+                  </div>
+                )}
+
+                {/* Contact Info */}
+                {coach.email && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <h4 className="font-semibold text-sm text-foreground">Contact</h4>
+                    <p className="text-sm text-muted-foreground break-all">
+                      {coach.email}
+                    </p>
+                  </div>
+                )}
+
+                {/* Book Session Button */}
+                <div className="pt-4">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => navigate('/login')}
+                  >
+                    Book Training Session
                   </Button>
                 </div>
               </CardContent>
@@ -161,9 +192,16 @@ const Index = () => {
           ))}
         </div>
 
-        {coaches.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No coaches available at the moment.</p>
+        {coaches.length === 0 && !loading && (
+          <div className="text-center py-16">
+            <div className="max-w-md mx-auto">
+              <h3 className="text-xl font-semibold text-foreground mb-2">
+                No Coaches Available
+              </h3>
+              <p className="text-muted-foreground">
+                We're currently expanding our coaching team. Please check back soon!
+              </p>
+            </div>
           </div>
         )}
       </div>
