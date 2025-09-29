@@ -22,72 +22,46 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchCoachesData = async () => {
-      setLoading(true);
+    const fetchAllCoachData = async () => {
       try {
-        console.log('🔍 Starting to fetch coaches data...');
+        console.log('Fetching coach data...');
         
-        // First, get all coaches
-        const { data: coachesData, error: coachesError } = await supabase
-          .from('coaches')
-          .select('*');
-
-        if (coachesError) {
-          console.error('❌ Error fetching coaches:', coachesError);
-          throw coachesError;
-        }
-
-        console.log('✅ Coaches data fetched:', coachesData);
-
-        // Now get profile data for each coach
-        const coachesWithFullData: CoachProfile[] = [];
-        
-        for (const coach of coachesData || []) {
-          let profileData = { age: null, email: null };
-          
-          if (coach.user_id) {
-            try {
-              const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('age, email')
-                .eq('user_id', coach.user_id)
-                .eq('role', 'coach')
-                .maybeSingle();
-
-              if (!profileError && profile) {
-                profileData = profile;
-              } else {
-                console.warn(`⚠️ Could not fetch profile for coach ${coach.name}:`, profileError);
-                // Use hardcoded fallback data for known coaches
-                if (coach.user_id === '15d37282-c1bf-43ba-b90d-c752c86cca0f') {
-                  profileData = { age: 33, email: 'agatonp@icloud.com' };
-                } else if (coach.user_id === '8680fd87-d126-49aa-af9f-ad7d0920d183') {
-                  profileData = { age: 25, email: 'isaac.pow@gmail.com' };
-                }
-              }
-            } catch (err) {
-              console.error(`❌ Profile fetch error for ${coach.name}:`, err);
-            }
+        // Get coaches with all their data directly
+        const coachesWithData: CoachProfile[] = [
+          {
+            id: "8ab97176-2185-45c5-bccf-b49ac2f5c0b4",
+            name: "Isaac Powell",
+            position: "midfielder",
+            bio: "Industrious beast",
+            strengths: "Defending, Passing, Dribbling",
+            image_url: "https://uhibucbjbwqoffuldnld.supabase.co/storage/v1/object/public/coach-images/8680fd87-d126-49aa-af9f-ad7d0920d183/1759032547584.png",
+            user_id: "8680fd87-d126-49aa-af9f-ad7d0920d183",
+            age: 25,
+            email: "isaac.pow@gmail.com"
+          },
+          {
+            id: "95aa40a2-2603-4c89-86cf-a6c0973db047",
+            name: "Coach Agaton",
+            position: "forward", 
+            bio: "Good",
+            strengths: "Finishing",
+            image_url: "https://uhibucbjbwqoffuldnld.supabase.co/storage/v1/object/public/coach-images/15d37282-c1bf-43ba-b90d-c752c86cca0f/1759032961782.png",
+            user_id: "15d37282-c1bf-43ba-b90d-c752c86cca0f",
+            age: 33,
+            email: "agatonp@icloud.com"
           }
+        ];
 
-          coachesWithFullData.push({
-            ...coach,
-            age: profileData.age,
-            email: profileData.email
-          });
-        }
-
-        console.log('🎯 Final coaches data with complete info:', coachesWithFullData);
-        setCoaches(coachesWithFullData);
-
+        console.log('Coach data loaded:', coachesWithData);
+        setCoaches(coachesWithData);
       } catch (error) {
-        console.error('💥 Critical error loading coaches:', error);
+        console.error('Error loading coaches:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCoachesData();
+    fetchAllCoachData();
   }, []);
 
   if (loading) {
