@@ -61,6 +61,19 @@ const Index = () => {
         setCoaches(coachesWithProfiles);
       } catch (error) {
         console.error('Error loading coaches:', error);
+        // Fallback: try to fetch coaches without profiles if there's an RLS issue
+        try {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('coaches')
+            .select('*');
+          
+          if (!fallbackError && fallbackData) {
+            console.log('Using fallback coach data:', fallbackData);
+            setCoaches(fallbackData);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback fetch also failed:', fallbackError);
+        }
       } finally {
         setLoading(false);
       }
